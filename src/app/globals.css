@@ -1,0 +1,348 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0a1020;
+  --card: #121c32;
+  --border: #1e3a5f;
+  --accent: #004a99;
+  --accent-foreground: #ffffff;
+  --featured: #0a2d54;
+  --featured-border: #004a99;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --success: #34d399;
+  --danger: #f87171;
+  --salud-blue: #004a99;
+  --pitch-line: rgba(0, 74, 153, 0.22);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Pitch stripes + centre circle hint */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(
+      circle at 50% -8%,
+      rgba(0, 74, 153, 0.18) 0%,
+      transparent 42%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(50% - 1px),
+      var(--pitch-line) calc(50% - 1px),
+      var(--pitch-line) calc(50% + 1px),
+      transparent calc(50% + 1px),
+      transparent 100%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 119px,
+      rgba(255, 255, 255, 0.025) 119px,
+      rgba(255, 255, 255, 0.025) 120px
+    );
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
+}
+
+/* —— Header —— */
+.site-header {
+  margin-bottom: 1.5rem;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0, 74, 153, 0.25);
+}
+
+.site-header__brand {
+  position: relative;
+  background: var(--salud-blue);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 3px solid rgba(255, 255, 255, 0.12);
+}
+
+.site-header__admin {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.15);
+  transition: background 0.15s, color 0.15s;
+}
+
+.site-header__admin:hover {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.site-header__admin--active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.site-header__logo {
+  height: auto;
+  width: auto;
+  max-width: min(240px, 85vw);
+  object-fit: contain;
+}
+
+.site-header__title-block {
+  background: linear-gradient(180deg, var(--card) 0%, rgba(18, 28, 50, 0.95) 100%);
+  padding: 1rem 1.25rem 1.1rem;
+  position: relative;
+}
+
+.site-header__title-block::before {
+  content: "";
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  top: 0;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--accent) 0,
+    var(--accent) 12px,
+    transparent 12px,
+    transparent 20px
+  );
+  opacity: 0.5;
+}
+
+.site-header__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.site-header__football-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--accent);
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.site-header__football-icon--flip {
+  transform: scaleX(-1);
+}
+
+.site-header__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.site-header__tagline {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin-top: 0.45rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.site-header__pitch-mark {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* Floating football decorations */
+.football-decor {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.football-decor__ball {
+  position: absolute;
+  width: 7rem;
+  height: 7rem;
+  color: var(--accent);
+  opacity: 0.12;
+}
+
+.football-decor__ball--tl {
+  top: 12%;
+  left: -2rem;
+  transform: rotate(-18deg);
+}
+
+.football-decor__ball--br {
+  bottom: 8%;
+  right: -2rem;
+  transform: rotate(24deg);
+  width: 5.5rem;
+  height: 5.5rem;
+}
+
+.football-decor__center-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(90vw, 520px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--pitch-line);
+  border-radius: 50%;
+  opacity: 0.35;
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+/* Scoreboard + Supporter Wall side by side */
+.scoreboard-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .scoreboard-page {
+    grid-template-columns: 1fr minmax(280px, 340px);
+    align-items: start;
+  }
+}
+
+.app-shell--wide {
+  max-width: 72rem;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: #dc2626;
+  color: #fff;
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
+
+.live-badge--sm {
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6rem;
+}
+
+/* Green dot in nav when live chat is open */
+.nav-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
+  flex-shrink: 0;
+}
+
+.nav-bar {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.nav-bar__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+.pick-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.pick-badge--exact {
+  background: rgba(52, 211, 153, 0.2);
+  color: var(--success);
+}
+
+.pick-badge--ok {
+  background: rgba(0, 74, 153, 0.35);
+  color: #93c5fd;
+}
+
+.pick-badge--wrong {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--danger);
+}
+
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    border-color: rgba(248, 113, 113, 0.5);
+  }
+  50% {
+    border-color: rgba(248, 113, 113, 0.9);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}

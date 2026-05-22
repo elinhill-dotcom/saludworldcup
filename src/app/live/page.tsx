@@ -1,0 +1,84 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { formatCestMatchKickoff } from "@/lib/datetime";
+
+type LiveMatch = {
+  id: number;
+  homeTeam: string;
+  awayTeam: string;
+  kickoffAt: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  finished: boolean;
+  groupCode: string | null;
+};
+
+export default function LivePage() {
+  const [live, setLive] = useState<LiveMatch[]>([]);
+
+  useEffect(() => {
+    const load = () =>
+      fetch("/api/matches/live")
+        .then((r) => r.json())
+        .then((d) => setLive(d.live ?? []));
+    load();
+    const id = setInterval(load, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <section>
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <span className="live-badge">LIVE</span>
+          Match chat
+        </h2>
+        <p className="text-sm text-[var(--muted)] mt-2">
+          Chat opens <strong className="text-white">15 minutes before</strong>{" "}
+          kickoff and stays open until{" "}
+          <strong className="text-white">2 hours after</strong> kickoff. Chat with
+          colleagues — match results are posted later on the Results page.
+        </p>
+      </section>
+
+      {live.length === 0 ? (
+        <p className="text-[var(--muted)] rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
+          No matches are live right now. Chat opens 15 minutes before kickoff and
+          closes 2 hours after kickoff.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {live.map((m) => {
+            const score =
+              m.homeScore !== null && m.awayScore !== null
+                ? `${m.homeScore} – ${m.awayScore}`
+                : "vs";
+            return (
+              <li key={m.id}>
+                <Link
+                  href={`/live/${m.id}`}
+                  className="block rounded-xl border border-[var(--accent)]/50 bg-[var(--card)] p-4 hover:border-[var(--accent)] transition"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-lg">
+                      {m.homeTeam}{" "}
+                      <span className="text-[var(--accent)]">{score}</span>{" "}
+                      {m.awayTeam}
+                    </p>
+                    <span className="live-badge">Live chat →</span>
+                  </div>
+                  <p className="text-xs text-[var(--muted)] mt-1">
+                    {formatCestMatchKickoff(m.kickoffAt)}
+                    {m.groupCode ? ` · Group ${m.groupCode}` : ""}
+                  </p>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
