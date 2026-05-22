@@ -1,19 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { createWallComment, fetchWallComments } from "@/lib/supabase-wall";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 const MAX_MESSAGE = 500;
 const MAX_NAME = 80;
 const MIN_NAME = 2;
 
 export async function GET() {
-  const comments = await prisma.wallComment.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
-  return NextResponse.json({ comments });
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 503 },
+    );
+  }
+
+  const res = await fetchWallComments();
+  if (res.error) {
+    return NextResponse.json({ error: res.error }, { status: 500 });
+  }
+
+  return NextResponse.json({ comments: res.data ?? [] });
 }
 
 export async function POST(req: NextRequest) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 503 },
+    );
+  }
+
   const body = await req.json();
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const message = typeof body.message === "string" ? body.message.trim() : "";
@@ -31,9 +47,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const comment = await prisma.wallComment.create({
-    data: { name, message },
-  });
+  const res = await createWallComment(name, message);
+  if (res.error || !res.data) {
+    return NextResponse.json(
+      { error: res.error ?? "Could not post comment" },
+      { status: 500 },
+    );
+  }
 
-  return NextResponse.json({ comment }, { status: 201 });
+  return NextResponse.json({ comment: res.data }, { status: 201 });
 }

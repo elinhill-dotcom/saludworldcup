@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
-import { computeLeaderboard } from "@/lib/leaderboard";
-import { JAR_CONTRIBUTION_EUR } from "@/lib/matches-data";
+import { getLeaderboardPayload } from "@/lib/leaderboard";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export async function GET() {
-  const entries = await computeLeaderboard();
-  const playerCount = entries.length;
-  const jarTotalEur = playerCount * JAR_CONTRIBUTION_EUR;
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 503 },
+    );
+  }
 
-  return NextResponse.json({
-    entries,
-    playerCount,
-    jarTotalEur,
-    jarContributionEur: JAR_CONTRIBUTION_EUR,
-  });
+  const res = await getLeaderboardPayload();
+  if (res.error || !res.data) {
+    return NextResponse.json(
+      { error: res.error ?? "Failed to load leaderboard" },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json(res.data);
 }

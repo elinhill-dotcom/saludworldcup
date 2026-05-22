@@ -1,25 +1,19 @@
 import { NextResponse } from "next/server";
-import { isMatchLive } from "@/lib/match-live";
-import { prisma } from "@/lib/db";
+import { fetchLiveMatches } from "@/lib/supabase-matches";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export async function GET() {
-  const matches = await prisma.match.findMany({
-    orderBy: { kickoffAt: "asc" },
-  });
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ live: [], count: 0 });
+  }
 
-  const live = matches
-    .filter((m) => isMatchLive(m.kickoffAt))
-    .map((m) => ({
-      id: m.id,
-      homeTeam: m.homeTeam,
-      awayTeam: m.awayTeam,
-      kickoffAt: m.kickoffAt.toISOString(),
-      homeScore: m.homeScore,
-      awayScore: m.awayScore,
-      finished: m.finished,
-      groupCode: m.groupCode,
-      stage: m.stage,
-    }));
+  const res = await fetchLiveMatches();
+  if (res.error || !res.data) {
+    return NextResponse.json(
+      { error: res.error ?? "Failed to load live matches" },
+      { status: 500 },
+    );
+  }
 
-  return NextResponse.json({ live, count: live.length });
+  return NextResponse.json({ live: res.data, count: res.data.length });
 }

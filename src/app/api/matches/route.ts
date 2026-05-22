@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { fetchMatches } from "@/lib/supabase-matches";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
-  const stage = req.nextUrl.searchParams.get("stage");
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 503 },
+    );
+  }
 
-  const matches = await prisma.match.findMany({
-    where: stage ? { stage } : undefined,
-    orderBy: [{ kickoffAt: "asc" }, { id: "asc" }],
-  });
-  return NextResponse.json({ matches });
+  const stage = req.nextUrl.searchParams.get("stage") ?? undefined;
+  const res = await fetchMatches(stage ? { stage } : undefined);
+  if (res.error || !res.data) {
+    return NextResponse.json(
+      { error: res.error ?? "Failed to load matches" },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ matches: res.data });
 }

@@ -9,13 +9,14 @@ import {
 } from "@/lib/chat-name-storage";
 import { getStoredPlayer } from "@/lib/player-storage";
 import { formatCestMatchKickoff } from "@/lib/datetime";
-
-type ChatMessage = {
-  id: string;
-  name: string;
-  message: string;
-  createdAt: string;
-};
+import { isMatchLive } from "@/lib/match-live";
+import {
+  sendChatMessage,
+  subscribeToMatchChat,
+  unsubscribeChat,
+  type ChatMessage,
+} from "@/lib/supabase-chat";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 type MatchInfo = {
   id: number;
@@ -42,8 +43,11 @@ export function LiveChatRoom({ matchId }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState("");
   const [posting, setPosting] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const configured = isSupabaseConfigured();
 
   useEffect(() => {
     const stored = getChatDisplayName();
@@ -53,43 +57,56 @@ export function LiveChatRoom({ matchId }: Props) {
     setHydrated(true);
   }, []);
 
-  const lastFetchedAt = useRef<string | null>(null);
-  const initialLoad = useRef(true);
+  const appendMessage = useCallback((m: ChatMessage) => {
+    setMessages((prev) => {
+      if (prev.some((x) => x.id === m.id)) return prev;
+      return [...prev, m];
+    });
+  }, []);
 
-  const poll = useCallback(async () => {
-    const since = lastFetchedAt.current
-      ? `?since=${encodeURIComponent(lastFetchedAt.current)}`
-      : "";
-    const res = await fetch(`/api/chat/${matchId}${since}`);
-    if (!res.ok) return;
+  const loadRoom = useCallback(async () => {
+    if (!configured) {
+      setError("Supabase is not configured. Add env variables and restart.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    const res = await fetch(`/api/chat/${matchId}`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Could not load chat");
+      setLoading(false);
+      return;
+    }
+
     const data = await res.json();
     setMatch(data.match);
     setLive(data.live);
-
-    const incoming: ChatMessage[] = data.messages ?? [];
-    if (initialLoad.current) {
-      setMessages(incoming);
-      initialLoad.current = false;
-    } else if (incoming.length > 0) {
-      setMessages((prev) => {
-        const ids = new Set(prev.map((m) => m.id));
-        const added = incoming.filter((m) => !ids.has(m.id));
-        return added.length ? [...prev, ...added] : prev;
-      });
-    }
-    if (incoming.length > 0) {
-      lastFetchedAt.current = incoming[incoming.length - 1].createdAt;
-    }
-  }, [matchId]);
+    setMessages(data.messages ?? []);
+    setLoading(false);
+  }, [matchId, configured]);
 
   useEffect(() => {
-    if (!displayName || !hydrated) return;
-    initialLoad.current = true;
-    lastFetchedAt.current = null;
-    poll();
-    const id = setInterval(poll, 2500);
-    return () => clearInterval(id);
-  }, [displayName, hydrated, poll]);
+    if (!displayName || !hydrated || !configured) return;
+
+    loadRoom();
+
+    const channel = subscribeToMatchChat(
+      matchId,
+      (message) => appendMessage(message),
+      (status) => setConnectionStatus(status),
+    );
+
+    return () => unsubscribeChat(channel);
+  }, [displayName, hydrated, matchId, configured, loadRoom, appendMessage]);
+
+  useEffect(() => {
+    if (match?.kickoffAt) {
+      setLive(isMatchLive(match.kickoffAt));
+    }
+  }, [match?.kickoffAt]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -109,23 +126,30 @@ export function LiveChatRoom({ matchId }: Props) {
     if (!displayName) return;
     setPosting(true);
     setError("");
-    const res = await fetch(`/api/chat/${matchId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: displayName, message: text }),
-    });
-    const data = await res.json();
+
+    const res = await sendChatMessage(matchId, displayName, text);
     setPosting(false);
-    if (!res.ok) {
-      setError(data.error ?? "Could not send");
+
+    if (res.error || !res.data) {
+      setError(res.error ?? "Could not send");
       return;
     }
+
     setText("");
-    setMessages((prev) => [...prev, data.message]);
+    appendMessage(res.data);
   }
 
   if (!hydrated) {
     return <p className="text-[var(--muted)]">Loading…</p>;
+  }
+
+  if (!configured) {
+    return (
+      <p className="text-sm text-[var(--danger)]">
+        Live chat requires Supabase. Set NEXT_PUBLIC_SUPABASE_URL and
+        NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.
+      </p>
+    );
   }
 
   if (!displayName) {
@@ -193,6 +217,9 @@ export function LiveChatRoom({ matchId }: Props) {
                 </p>
               </>
             )}
+            {loading && !match && (
+              <p className="text-sm text-[var(--muted)] mt-2">Loading match…</p>
+            )}
           </div>
           <div className="flex flex-col items-end gap-2">
             {live ? (
@@ -203,6 +230,16 @@ export function LiveChatRoom({ matchId }: Props) {
             <span className="text-xs text-[var(--muted)]">
               Chatting as <strong className="text-white">{displayName}</strong>
             </span>
+            {connectionStatus === "SUBSCRIBED" && (
+              <span className="text-xs text-green-400">Connected</span>
+            )}
+            {connectionStatus && connectionStatus !== "SUBSCRIBED" && (
+              <span className="text-xs text-[var(--muted)]">
+                {connectionStatus === "CHANNEL_ERROR"
+                  ? "Reconnecting…"
+                  : connectionStatus}
+              </span>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -225,7 +262,11 @@ export function LiveChatRoom({ matchId }: Props) {
 
       <div className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] flex flex-col min-h-[360px]">
         <ul className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.length === 0 ? (
+          {loading && messages.length === 0 ? (
+            <li className="text-sm text-[var(--muted)] text-center py-8">
+              Loading messages…
+            </li>
+          ) : messages.length === 0 ? (
             <li className="text-sm text-[var(--muted)] text-center py-8">
               No messages yet — say hello!
             </li>

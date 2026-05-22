@@ -1,30 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { findOrCreatePlayerByName, fetchPlayers } from "@/lib/supabase-players";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-
-  if (name.length < 2 || name.length > 80) {
+  if (!isSupabaseConfigured()) {
     return NextResponse.json(
-      { error: "Enter a name (2–80 characters)." },
-      { status: 400 },
+      { error: "Supabase is not configured." },
+      { status: 503 },
     );
   }
 
-  const existing = await prisma.player.findUnique({ where: { name } });
-  if (existing) {
-    return NextResponse.json({ player: existing });
+  const body = await req.json();
+  const name = typeof body.name === "string" ? body.name : "";
+
+  const res = await findOrCreatePlayerByName(name);
+  if (res.error || !res.data) {
+    return NextResponse.json(
+      { error: res.error ?? "Could not register" },
+      { status: res.error?.includes("2–80") ? 400 : 500 },
+    );
   }
 
-  const player = await prisma.player.create({ data: { name } });
-  return NextResponse.json({ player }, { status: 201 });
+  return NextResponse.json({ player: res.data });
 }
 
 export async function GET() {
-  const players = await prisma.player.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, createdAt: true },
-  });
-  return NextResponse.json({ players });
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 503 },
+    );
+  }
+
+  const res = await fetchPlayers();
+  if (res.error || !res.data) {
+    return NextResponse.json(
+      { error: res.error ?? "Failed to load players" },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ players: res.data });
 }

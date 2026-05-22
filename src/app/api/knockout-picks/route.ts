@@ -1,26 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { predictionsLocked } from "@/lib/config";
-import { prisma } from "@/lib/db";
+import type { KnockoutFormState } from "@/lib/knockout-picks";
+import { findPlayerById } from "@/lib/supabase-players";
+import {
+  loadKnockoutPick,
+  saveKnockoutPick,
+} from "@/lib/supabase-predictions";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { ALL_TEAMS } from "@/lib/teams";
 
 const validTeams = new Set<string>(ALL_TEAMS);
 
-function sanitizeTeam(v: unknown): string | null {
-  if (typeof v !== "string" || !v) return null;
-  return validTeams.has(v) ? v : null;
+function sanitizeTeam(v: unknown): string {
+  if (typeof v !== "string" || !v) return "";
+  return validTeams.has(v) ? v : "";
 }
 
 export async function GET(req: NextRequest) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 503 },
+    );
+  }
+
   const playerId = req.nextUrl.searchParams.get("playerId");
   if (!playerId) {
     return NextResponse.json({ error: "Missing playerId" }, { status: 400 });
   }
 
-  const pick = await prisma.knockoutPick.findUnique({ where: { playerId } });
-  return NextResponse.json({ pick });
+  const res = await loadKnockoutPick(playerId);
+  if (res.error) {
+    return NextResponse.json({ error: res.error }, { status: 500 });
+  }
+
+  return NextResponse.json({ pick: res.data });
 }
 
 export async function POST(req: NextRequest) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 503 },
+    );
+  }
+
   if (predictionsLocked()) {
     return NextResponse.json(
       { error: "Picks are locked — the tournament has started." },
@@ -34,12 +58,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
 
-  const player = await prisma.player.findUnique({ where: { id: playerId } });
-  if (!player) {
+  const playerRes = await findPlayerById(playerId);
+  if (playerRes.error) {
+    return NextResponse.json({ error: playerRes.error }, { status: 500 });
+  }
+  if (!playerRes.data) {
     return NextResponse.json({ error: "Player not found" }, { status: 404 });
   }
 
-  const data = {
+  const form: KnockoutFormState = {
     sf1Home: sanitizeTeam(body.sf1Home),
     sf1Away: sanitizeTeam(body.sf1Away),
     sf2Home: sanitizeTeam(body.sf2Home),
@@ -51,11 +78,13 @@ export async function POST(req: NextRequest) {
     champion: sanitizeTeam(body.champion),
   };
 
-  const pick = await prisma.knockoutPick.upsert({
-    where: { playerId },
-    create: { playerId, ...data },
-    update: data,
-  });
+  const saveRes = await saveKnockoutPick(playerId, form);
+  if (saveRes.error || !saveRes.data) {
+    return NextResponse.json(
+      { error: saveRes.error ?? "Save failed" },
+      { status: 500 },
+    );
+  }
 
-  return NextResponse.json({ ok: true, pick });
+  return NextResponse.json({ ok: true, pick: saveRes.data });
 }
