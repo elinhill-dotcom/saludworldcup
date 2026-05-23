@@ -41,16 +41,32 @@ export async function loadChatMessages(
   }
 }
 
-export async function sendChatMessage(
+function validateChatInput(
+  name: string,
+  message: string,
+): { name: string; message: string } | { error: string } {
+  const trimmedName = name.trim();
+  const trimmedMsg = message.trim();
+  if (trimmedName.length < 2 || trimmedName.length > 80) {
+    return { error: "Enter a valid name." };
+  }
+  if (trimmedMsg.length < 1 || trimmedMsg.length > 400) {
+    return { error: "Message must be 1–400 characters." };
+  }
+  return { name: trimmedName, message: trimmedMsg };
+}
+
+export async function insertChatMessage(
   matchId: number,
   name: string,
   message: string,
+  opts?: { skipLiveCheck?: boolean; browser?: boolean },
 ): Promise<DbResult<ChatMessage>> {
-  const matchRes = await fetchMatchById(matchId, true);
+  const matchRes = await fetchMatchById(matchId, opts?.browser ?? false);
   if (matchRes.error || !matchRes.data) {
     return { data: null, error: matchRes.error ?? "Match not found" };
   }
-  if (!isMatchLive(matchRes.data.kickoffAt)) {
+  if (!opts?.skipLiveCheck && !isMatchLive(matchRes.data.kickoffAt)) {
     return {
       data: null,
       error:
@@ -58,23 +74,20 @@ export async function sendChatMessage(
     };
   }
 
-  const trimmedName = name.trim();
-  const trimmedMsg = message.trim();
-  if (trimmedName.length < 2 || trimmedName.length > 80) {
-    return { data: null, error: "Enter a valid name." };
-  }
-  if (trimmedMsg.length < 1 || trimmedMsg.length > 400) {
-    return { data: null, error: "Message must be 1–400 characters." };
+  const validated = validateChatInput(name, message);
+  if ("error" in validated) {
+    return { data: null, error: validated.error };
   }
 
   try {
-    const supabase = getSupabaseBrowser();
+    const supabase =
+      opts?.browser === true ? getSupabaseBrowser() : getSupabaseServer();
     const { data, error } = await supabase
       .from("match_chat_messages")
       .insert({
         match_id: matchId,
-        name: trimmedName,
-        message: trimmedMsg,
+        name: validated.name,
+        message: validated.message,
       })
       .select()
       .single();
@@ -84,6 +97,35 @@ export async function sendChatMessage(
   } catch (e) {
     return { data: null, error: toErrorMessage(e) };
   }
+}
+
+export async function sendChatMessage(
+  matchId: number,
+  name: string,
+  message: string,
+  adminPassword?: string | null,
+): Promise<DbResult<ChatMessage>> {
+  if (adminPassword) {
+    try {
+      const res = await fetch(`/api/chat/${matchId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": adminPassword,
+        },
+        body: JSON.stringify({ name, message }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { data: null, error: data.error ?? "Could not send" };
+      }
+      return { data: data.message as ChatMessage, error: null };
+    } catch (e) {
+      return { data: null, error: toErrorMessage(e) };
+    }
+  }
+
+  return insertChatMessage(matchId, name, message, { browser: true });
 }
 
 /** Subscribe to new messages for a match (realtime). */

@@ -32,20 +32,35 @@ export default function PicksPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [messageWarn, setMessageWarn] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const load = useCallback(async (playerId: string) => {
+    setLoadError("");
     const [mRes, pRes, kRes, cRes] = await Promise.all([
       fetch("/api/matches?stage=group"),
       fetch(`/api/predictions?playerId=${playerId}`),
       fetch(`/api/knockout-picks?playerId=${playerId}`),
       fetch("/api/config"),
     ]);
-    const { matches: ms } = await mRes.json();
-    const { predictions } = await pRes.json();
-    const { pick } = await kRes.json();
+    const mData = await mRes.json();
+    const pData = await pRes.json();
+    const kData = await kRes.json();
     const cfg = await cRes.json();
 
-    setMatches(ms);
+    if (!mRes.ok) {
+      setLoadError(
+        mData.error ??
+          "Could not load matches. Check Supabase settings and run npm run db:seed.",
+      );
+      setMatches([]);
+      return;
+    }
+
+    const ms = mData.matches as MatchView[];
+    const predictions = pData.predictions ?? [];
+    const pick = kData.pick;
+
+    setMatches(ms ?? []);
     setLocked(cfg.locked);
 
     const map: PredMap = {};
@@ -221,6 +236,18 @@ export default function PicksPage() {
         </p>
       )}
 
+      {loadError && (
+        <p className="rounded-lg bg-[var(--danger)]/20 text-[var(--danger)] px-4 py-3 text-sm space-y-2">
+          <strong>Matches could not be loaded.</strong> {loadError}
+          <span className="block text-[var(--muted)]">
+            Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to
+            .env, run supabase/schema.sql in Supabase, then{" "}
+            <code className="text-white">npm run db:seed</code> and restart the
+            dev server.
+          </span>
+        </p>
+      )}
+
       {locked && (
         <p className="rounded-lg bg-[var(--danger)]/20 text-[var(--danger)] px-4 py-2 text-sm">
           Picks are locked — view only.
@@ -304,6 +331,12 @@ export default function PicksPage() {
               </button>
             ))}
           </div>
+
+          {matches.length === 0 && !loadError && (
+            <p className="text-sm text-[var(--muted)]">
+              Loading matches…
+            </p>
+          )}
 
           {byDay.map(([day, dayMatches]) => (
             <section key={day}>

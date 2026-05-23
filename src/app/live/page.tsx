@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { isAdminLoggedIn } from "@/lib/admin-session";
 import { formatCestMatchKickoff } from "@/lib/datetime";
 
 type LiveMatch = {
@@ -15,8 +16,44 @@ type LiveMatch = {
   groupCode: string | null;
 };
 
+function MatchChatLink({ m, badge }: { m: LiveMatch; badge: string }) {
+  const score =
+    m.homeScore !== null && m.awayScore !== null
+      ? `${m.homeScore} – ${m.awayScore}`
+      : "vs";
+  return (
+    <li>
+      <Link
+        href={`/live/${m.id}`}
+        className="block rounded-xl border border-[var(--accent)]/50 bg-[var(--card)] p-4 hover:border-[var(--accent)] transition"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-semibold text-lg">
+            {m.homeTeam}{" "}
+            <span className="text-[var(--accent)]">{score}</span> {m.awayTeam}
+          </p>
+          <span className="live-badge">{badge}</span>
+        </div>
+        <p className="text-xs text-[var(--muted)] mt-1">
+          {formatCestMatchKickoff(m.kickoffAt)}
+          {m.groupCode ? ` · Group ${m.groupCode}` : ""}
+        </p>
+      </Link>
+    </li>
+  );
+}
+
 export default function LivePage() {
   const [live, setLive] = useState<LiveMatch[]>([]);
+  const [testMatches, setTestMatches] = useState<LiveMatch[]>([]);
+  const [admin, setAdmin] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setAdmin(isAdminLoggedIn());
+    sync();
+    window.addEventListener("focus", sync);
+    return () => window.removeEventListener("focus", sync);
+  }, []);
 
   useEffect(() => {
     const load = () =>
@@ -27,6 +64,17 @@ export default function LivePage() {
     const id = setInterval(load, 30000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!admin) {
+      setTestMatches([]);
+      return;
+    }
+
+    fetch("/api/matches?stage=group")
+      .then((r) => r.json())
+      .then((d) => setTestMatches(d.matches ?? []));
+  }, [admin]);
 
   return (
     <div className="space-y-6">
@@ -43,41 +91,49 @@ export default function LivePage() {
         </p>
       </section>
 
+      {admin && testMatches.length > 0 && (
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-amber-300">
+            Admin — test chat (any match)
+          </h3>
+          <p className="text-xs text-[var(--muted)]">
+            You are logged in on Admin. Open any match below to test live chat
+            outside the normal window.
+          </p>
+          <ul className="space-y-3">
+            {testMatches.map((m) => (
+              <MatchChatLink key={m.id} m={m} badge="Test chat →" />
+            ))}
+          </ul>
+        </section>
+      )}
+
       {live.length === 0 ? (
         <p className="text-[var(--muted)] rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
           No matches are live right now. Chat opens 15 minutes before kickoff and
           closes 2 hours after kickoff.
+          {!admin && (
+            <>
+              {" "}
+              Admins can test chat from any match after logging in on{" "}
+              <Link href="/admin" className="underline text-white">
+                Admin
+              </Link>
+              .
+            </>
+          )}
         </p>
       ) : (
-        <ul className="space-y-3">
-          {live.map((m) => {
-            const score =
-              m.homeScore !== null && m.awayScore !== null
-                ? `${m.homeScore} – ${m.awayScore}`
-                : "vs";
-            return (
-              <li key={m.id}>
-                <Link
-                  href={`/live/${m.id}`}
-                  className="block rounded-xl border border-[var(--accent)]/50 bg-[var(--card)] p-4 hover:border-[var(--accent)] transition"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-semibold text-lg">
-                      {m.homeTeam}{" "}
-                      <span className="text-[var(--accent)]">{score}</span>{" "}
-                      {m.awayTeam}
-                    </p>
-                    <span className="live-badge">Live chat →</span>
-                  </div>
-                  <p className="text-xs text-[var(--muted)] mt-1">
-                    {formatCestMatchKickoff(m.kickoffAt)}
-                    {m.groupCode ? ` · Group ${m.groupCode}` : ""}
-                  </p>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <section className="space-y-3">
+          {admin && testMatches.length > 0 && (
+            <h3 className="text-sm font-semibold">Live now</h3>
+          )}
+          <ul className="space-y-3">
+            {live.map((m) => (
+              <MatchChatLink key={m.id} m={m} badge="Live chat →" />
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

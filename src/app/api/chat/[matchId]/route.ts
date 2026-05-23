@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminPassword, requireAdmin } from "@/lib/admin-auth";
+import { verifyAdminPassword } from "@/lib/config";
 import { isMatchLive } from "@/lib/match-live";
 import { fetchMatchById } from "@/lib/supabase-matches";
-import { loadChatMessages } from "@/lib/supabase-chat";
+import { insertChatMessage, loadChatMessages } from "@/lib/supabase-chat";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 type RouteCtx = { params: Promise<{ matchId: string }> };
@@ -35,6 +37,9 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
   }
 
   const match = matchRes.data;
+  const adminTestMode = verifyAdminPassword(getAdminPassword(req));
+  const live = adminTestMode || isMatchLive(match.kickoffAt);
+
   return NextResponse.json({
     match: {
       id: match.id,
@@ -47,18 +52,44 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
       groupCode: match.groupCode,
       stage: match.stage,
     },
-    live: isMatchLive(match.kickoffAt),
+    live,
+    adminTestMode,
     messages: msgRes.data ?? [],
   });
 }
 
-/** POST kept for clients that cannot use browser Supabase; prefer client insert + realtime. */
+/** Admin test mode: send with x-admin-password when chat window is closed. */
 export async function POST(req: NextRequest, ctx: RouteCtx) {
-  return NextResponse.json(
-    {
-      error:
-        "Send messages from the browser via Supabase client (realtime).",
-    },
-    { status: 410 },
-  );
+  const auth = requireAdmin(req);
+  if (auth) return auth;
+
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 503 },
+    );
+  }
+
+  const { matchId: raw } = await ctx.params;
+  const matchId = Number(raw);
+  if (!Number.isInteger(matchId)) {
+    return NextResponse.json({ error: "Invalid match" }, { status: 400 });
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.name !== "string" || typeof body.message !== "string") {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  }
+
+  const res = await insertChatMessage(matchId, body.name, body.message, {
+    skipLiveCheck: true,
+  });
+  if (res.error || !res.data) {
+    return NextResponse.json(
+      { error: res.error ?? "Could not send" },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json({ message: res.data });
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { isAdminLoggedIn } from "@/lib/admin-session";
 import { formatCestMatchKickoff } from "@/lib/datetime";
 import { isMatchLive } from "@/lib/match-live";
 import { evaluatePick } from "@/lib/pick-feedback";
@@ -42,7 +44,16 @@ export function MatchCard({
   showResult,
 }: Props) {
   const featured = match.featured;
+  const [admin, setAdmin] = useState(false);
   const live = isMatchLive(match.kickoffAt);
+  const showChatLink = live || admin;
+
+  useEffect(() => {
+    const sync = () => setAdmin(isAdminLoggedIn());
+    sync();
+    window.addEventListener("focus", sync);
+    return () => window.removeEventListener("focus", sync);
+  }, []);
   const feedback =
     showResult ? evaluatePick(predHome, predAway, match) : null;
 
@@ -126,12 +137,14 @@ export function MatchCard({
         </div>
       )}
 
-      {live && (
+      {showChatLink && (
         <Link
           href={`/live/${match.id}`}
           className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] py-2 text-sm font-semibold text-[var(--accent-foreground)] hover:opacity-90"
         >
-          Live chat — chat with colleagues
+          {live
+            ? "Live chat — chat with colleagues"
+            : "Test live chat (admin)"}
         </Link>
       )}
     </article>

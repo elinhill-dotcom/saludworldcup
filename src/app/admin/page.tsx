@@ -8,8 +8,8 @@ import {
 } from "@/components/KnockoutPickForm";
 import { AdminPlayers } from "@/components/AdminPlayers";
 import type { MatchView } from "@/components/MatchCard";
-
-const ADMIN_KEY = "wc2026_admin_pw";
+import { ADMIN_SESSION_KEY } from "@/lib/admin-session";
+import Link from "next/link";
 
 export default function AdminPage() {
   const [password, setPassword] = useState("");
@@ -28,7 +28,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem(ADMIN_KEY);
+    const saved = sessionStorage.getItem(ADMIN_SESSION_KEY);
     if (saved) setPassword(saved);
     fetch("/api/matches?stage=group")
       .then((r) => r.json())
@@ -55,7 +55,7 @@ export default function AdminPage() {
 
   function rememberPw(pw: string) {
     setPassword(pw);
-    sessionStorage.setItem(ADMIN_KEY, pw);
+    sessionStorage.setItem(ADMIN_SESSION_KEY, pw);
   }
 
   const shown = matches.filter((m) =>
@@ -256,6 +256,12 @@ function AdminMatchRow({
       <p className="font-semibold mb-3">
         {match.homeTeam} – {match.awayTeam}
       </p>
+      <Link
+        href={`/live/${match.id}`}
+        className="text-xs text-[var(--accent)] hover:underline mb-3 inline-block"
+      >
+        Test live chat →
+      </Link>
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="number"

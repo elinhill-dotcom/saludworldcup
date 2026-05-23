@@ -9,6 +9,11 @@ import {
 } from "@/lib/chat-name-storage";
 import { getStoredPlayer } from "@/lib/player-storage";
 import { formatCestMatchKickoff } from "@/lib/datetime";
+import {
+  adminFetchHeaders,
+  getAdminPassword,
+  isAdminLoggedIn,
+} from "@/lib/admin-session";
 import { isMatchLive } from "@/lib/match-live";
 import {
   sendChatMessage,
@@ -46,6 +51,7 @@ export function LiveChatRoom({ matchId }: Props) {
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("");
   const [posting, setPosting] = useState(false);
+  const [adminTestMode, setAdminTestMode] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const configured = isSupabaseConfigured();
 
@@ -73,7 +79,9 @@ export function LiveChatRoom({ matchId }: Props) {
     setLoading(true);
     setError("");
 
-    const res = await fetch(`/api/chat/${matchId}`);
+    const res = await fetch(`/api/chat/${matchId}`, {
+      headers: adminFetchHeaders(),
+    });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Could not load chat");
@@ -84,6 +92,7 @@ export function LiveChatRoom({ matchId }: Props) {
     const data = await res.json();
     setMatch(data.match);
     setLive(data.live);
+    setAdminTestMode(Boolean(data.adminTestMode));
     setMessages(data.messages ?? []);
     setLoading(false);
   }, [matchId, configured]);
@@ -103,10 +112,11 @@ export function LiveChatRoom({ matchId }: Props) {
   }, [displayName, hydrated, matchId, configured, loadRoom, appendMessage]);
 
   useEffect(() => {
+    if (adminTestMode) return;
     if (match?.kickoffAt) {
       setLive(isMatchLive(match.kickoffAt));
     }
-  }, [match?.kickoffAt]);
+  }, [match?.kickoffAt, adminTestMode]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -127,7 +137,12 @@ export function LiveChatRoom({ matchId }: Props) {
     setPosting(true);
     setError("");
 
-    const res = await sendChatMessage(matchId, displayName, text);
+    const res = await sendChatMessage(
+      matchId,
+      displayName,
+      text,
+      getAdminPassword(),
+    );
     setPosting(false);
 
     if (res.error || !res.data) {
@@ -223,7 +238,11 @@ export function LiveChatRoom({ matchId }: Props) {
           </div>
           <div className="flex flex-col items-end gap-2">
             {live ? (
-              <span className="live-badge">LIVE</span>
+              adminTestMode ? (
+                <span className="live-badge">ADMIN TEST</span>
+              ) : (
+                <span className="live-badge">LIVE</span>
+              )
             ) : (
               <span className="text-xs text-[var(--muted)]">Chat closed</span>
             )}
@@ -256,6 +275,22 @@ export function LiveChatRoom({ matchId }: Props) {
           <p className="text-sm text-[var(--danger)] mt-3">
             Chat is closed (opens 15 min before, closes 2 h after kickoff). You
             can read old messages but cannot post new ones.
+            {isAdminLoggedIn() && (
+              <>
+                {" "}
+                Log in on{" "}
+                <Link href="/admin" className="underline text-white">
+                  Admin
+                </Link>{" "}
+                to test chat outside match hours.
+              </>
+            )}
+          </p>
+        )}
+        {adminTestMode && (
+          <p className="text-sm text-amber-300/90 mt-3">
+            Admin test mode — chat is open for you only; colleagues still see
+            the normal schedule.
           </p>
         )}
       </div>
