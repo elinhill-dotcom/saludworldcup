@@ -12,7 +12,6 @@ import { formatCestMatchKickoff } from "@/lib/datetime";
 import {
   adminFetchHeaders,
   getAdminPassword,
-  isAdminLoggedIn,
 } from "@/lib/admin-session";
 import { isMatchLive } from "@/lib/match-live";
 import {
@@ -275,16 +274,6 @@ export function LiveChatRoom({ matchId }: Props) {
           <p className="text-sm text-[var(--danger)] mt-3">
             Chat is closed (opens 15 min before, closes 2 h after kickoff). You
             can read old messages but cannot post new ones.
-            {isAdminLoggedIn() && (
-              <>
-                {" "}
-                Log in on{" "}
-                <Link href="/admin" className="underline text-white">
-                  Admin
-                </Link>{" "}
-                to test chat outside match hours.
-              </>
-            )}
           </p>
         )}
         {adminTestMode && (

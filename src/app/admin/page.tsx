@@ -8,11 +8,21 @@ import {
 } from "@/components/KnockoutPickForm";
 import { AdminPlayers } from "@/components/AdminPlayers";
 import type { MatchView } from "@/components/MatchCard";
-import { ADMIN_SESSION_KEY } from "@/lib/admin-session";
+import {
+  clearAdminSession,
+  getAdminPassword,
+  isAdminLoggedIn,
+  verifyAndLogin,
+} from "@/lib/admin-session";
 import Link from "next/link";
 
 export default function AdminPage() {
   const [password, setPassword] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [pwInput, setPwInput] = useState("");
+
   const [matches, setMatches] = useState<MatchView[]>([]);
   const [knockout, setKnockout] = useState<KnockoutFormState>(
     emptyKnockoutForm(),
@@ -28,11 +38,17 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem(ADMIN_SESSION_KEY);
-    if (saved) setPassword(saved);
+    if (isAdminLoggedIn()) {
+      setPassword(getAdminPassword()!);
+      setLoggedIn(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!loggedIn) return;
     fetch("/api/matches?stage=group")
       .then((r) => r.json())
-      .then((d) => setMatches(d.matches));
+      .then((d) => setMatches(d.matches ?? []));
     fetch("/api/admin/knockout")
       .then((r) => r.json())
       .then((d) => {
@@ -51,11 +67,27 @@ export default function AdminPage() {
           });
         }
       });
-  }, []);
+  }, [loggedIn]);
 
-  function rememberPw(pw: string) {
-    setPassword(pw);
-    sessionStorage.setItem(ADMIN_SESSION_KEY, pw);
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoggingIn(true);
+    setLoginError("");
+    const result = await verifyAndLogin(pwInput);
+    setLoggingIn(false);
+    if (result.ok) {
+      setPassword(pwInput);
+      setLoggedIn(true);
+    } else {
+      setLoginError(result.error ?? "Wrong password");
+    }
+  }
+
+  function handleLogout() {
+    clearAdminSession();
+    setLoggedIn(false);
+    setPassword("");
+    setPwInput("");
   }
 
   const shown = matches.filter((m) =>
@@ -105,19 +137,52 @@ export default function AdminPage() {
     showMessage("Knockout answers saved — scoreboard updated.");
   }
 
+  if (!loggedIn) {
+    return (
+      <div className="space-y-6">
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 max-w-sm">
+          <h2 className="font-semibold mb-3">Admin</h2>
+          <form onSubmit={handleLogin} className="space-y-3">
+            <label className="block text-sm text-[var(--muted)]">
+              Password
+            </label>
+            <input
+              type="password"
+              value={pwInput}
+              onChange={(e) => setPwInput(e.target.value)}
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-2"
+              autoFocus
+              required
+            />
+            <button
+              type="submit"
+              disabled={loggingIn || !pwInput}
+              className="rounded-lg bg-[var(--accent)] px-5 py-2 font-semibold text-[var(--accent-foreground)] disabled:opacity-50"
+            >
+              {loggingIn ? "Checking…" : "Log in"}
+            </button>
+            {loginError && (
+              <p className="text-sm text-[var(--danger)]">{loginError}</p>
+            )}
+          </form>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
-        <h2 className="font-semibold mb-3">Admin</h2>
-        <label className="block text-sm text-[var(--muted)] mb-1">
-          Password (ADMIN_PASSWORD in .env)
-        </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => rememberPw(e.target.value)}
-          className="w-full max-w-xs rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-2"
-        />
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Admin</h2>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="text-xs text-[var(--muted)] underline hover:text-white"
+          >
+            Log out
+          </button>
+        </div>
       </section>
 
       {message && (

@@ -112,16 +112,6 @@ export default function LivePage() {
         <p className="text-[var(--muted)] rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
           No matches are live right now. Chat opens 15 minutes before kickoff and
           closes 2 hours after kickoff.
-          {!admin && (
-            <>
-              {" "}
-              Admins can test chat from any match after logging in on{" "}
-              <Link href="/admin" className="underline text-white">
-                Admin
-              </Link>
-              .
-            </>
-          )}
         </p>
       ) : (
         <section className="space-y-3">
