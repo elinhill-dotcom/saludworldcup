@@ -12,6 +12,17 @@ import { fetchMatchById } from "@/lib/supabase-matches";
 
 export type ChatMessage = ReturnType<typeof mapChatMessage>;
 
+export type ChatPresenceUser = {
+  /** Stable-ish identifier for this browser session. */
+  key: string;
+  /** Display name shown in the room. */
+  name: string;
+  /** Optional playerId from localStorage session. */
+  playerId?: string | null;
+  /** ISO time when presence was tracked. */
+  at?: string;
+};
+
 export async function loadChatMessages(
   matchId: number,
   since?: string,
@@ -154,6 +165,88 @@ export function subscribeToMatchChat(
     )
     .subscribe((status) => {
       onStatus?.(status);
+    });
+
+  return channel;
+}
+
+function presenceUsersFromChannel(channel: RealtimeChannel): ChatPresenceUser[] {
+  // presenceState(): { [key: string]: Array<PresencePayload> }
+  // Where each payload is whatever was passed to track().
+  const state = channel.presenceState() as Record<string, ChatPresenceUser[]>;
+  const users: ChatPresenceUser[] = [];
+  for (const key of Object.keys(state)) {
+    for (const meta of state[key] ?? []) {
+      users.push({
+        key,
+        name: meta?.name ?? "Anonymous",
+        playerId: meta?.playerId ?? null,
+        at: meta?.at,
+      });
+    }
+  }
+
+  // De-duplicate by key; if multiple metas exist, keep the newest-ish one.
+  const byKey = new Map<string, ChatPresenceUser>();
+  for (const u of users) byKey.set(u.key, u);
+  return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name, "en"));
+}
+
+/**
+ * Subscribe to a match chat room with Supabase Realtime Presence:
+ * lets the UI show who's currently in the room.
+ */
+export function subscribeToMatchChatRoom(
+  matchId: number,
+  presence: ChatPresenceUser,
+  handlers: {
+    onInsert: (message: ChatMessage) => void;
+    onPresence: (users: ChatPresenceUser[]) => void;
+    onStatus?: (status: string) => void;
+  },
+): RealtimeChannel {
+  const supabase = getSupabaseBrowser();
+
+  const channel = supabase
+    .channel(`match-chat-${matchId}`, {
+      config: {
+        presence: { key: presence.key },
+      },
+    })
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "match_chat_messages",
+        filter: `match_id=eq.${matchId}`,
+      },
+      (payload) => {
+        if (payload.new) {
+          handlers.onInsert(mapChatMessage(payload.new as ChatMessageRow));
+        }
+      },
+    )
+    .on("presence", { event: "sync" }, () => {
+      handlers.onPresence(presenceUsersFromChannel(channel));
+    })
+    .on("presence", { event: "join" }, () => {
+      handlers.onPresence(presenceUsersFromChannel(channel));
+    })
+    .on("presence", { event: "leave" }, () => {
+      handlers.onPresence(presenceUsersFromChannel(channel));
+    })
+    .subscribe(async (status) => {
+      handlers.onStatus?.(status);
+      if (status === "SUBSCRIBED") {
+        // Track this user into the room.
+        await channel.track({
+          key: presence.key,
+          name: presence.name,
+          playerId: presence.playerId ?? null,
+          at: new Date().toISOString(),
+        } satisfies ChatPresenceUser);
+      }
     });
 
   return channel;

@@ -16,9 +16,10 @@ import {
 import { isMatchLive } from "@/lib/match-live";
 import {
   sendChatMessage,
-  subscribeToMatchChat,
+  subscribeToMatchChatRoom,
   unsubscribeChat,
   type ChatMessage,
+  type ChatPresenceUser,
 } from "@/lib/supabase-chat";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -45,6 +46,7 @@ export function LiveChatRoom({ matchId }: Props) {
   const [match, setMatch] = useState<MatchInfo | null>(null);
   const [live, setLive] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [present, setPresent] = useState<ChatPresenceUser[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,10 +55,17 @@ export function LiveChatRoom({ matchId }: Props) {
   const [adminTestMode, setAdminTestMode] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const configured = isSupabaseConfigured();
+  const sessionKeyRef = useRef<string>(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : String(Math.random()).slice(2),
+  );
+  const playerRef = useRef(getStoredPlayer());
 
   useEffect(() => {
     const stored = getChatDisplayName();
     const player = getStoredPlayer();
+    playerRef.current = player;
     setDisplayName(stored);
     setNameInput(stored ?? player?.name ?? "");
     setHydrated(true);
@@ -101,11 +110,19 @@ export function LiveChatRoom({ matchId }: Props) {
 
     loadRoom();
 
-    const channel = subscribeToMatchChat(
-      matchId,
-      (message) => appendMessage(message),
-      (status) => setConnectionStatus(status),
-    );
+    const player = playerRef.current;
+    const presence: ChatPresenceUser = {
+      key: `${player?.id ?? displayName}:${sessionKeyRef.current}`,
+      name: displayName,
+      playerId: player?.id ?? null,
+      at: new Date().toISOString(),
+    };
+
+    const channel = subscribeToMatchChatRoom(matchId, presence, {
+      onInsert: (message) => appendMessage(message),
+      onPresence: (users) => setPresent(users),
+      onStatus: (status) => setConnectionStatus(status),
+    });
 
     return () => unsubscribeChat(channel);
   }, [displayName, hydrated, matchId, configured, loadRoom, appendMessage]);
@@ -269,6 +286,17 @@ export function LiveChatRoom({ matchId }: Props) {
               Change name
             </button>
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-[var(--muted)]">
+            In this room:{" "}
+            <strong className="text-white">{present.length}</strong>
+          </p>
+          {present.length > 0 && (
+            <p className="text-xs text-[var(--muted)] max-w-full truncate">
+              {present.map((u) => u.name).join(", ")}
+            </p>
+          )}
         </div>
         {!live && (
           <p className="text-sm text-[var(--danger)] mt-3">
