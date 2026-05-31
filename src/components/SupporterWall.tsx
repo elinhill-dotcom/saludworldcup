@@ -89,7 +89,7 @@ export function SupporterWall() {
             maxLength={500}
             rows={3}
             placeholder="Come on Sweden! / Good luck everyone!"
-            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 resize-y"
+            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-3 text-base leading-relaxed resize-y min-h-[8.5rem] sm:min-h-[7rem] lg:min-h-[5.5rem] lg:py-2 lg:text-sm"
           />
         </label>
         <p className="text-xs text-[var(--muted)] text-right">
