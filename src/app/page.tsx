@@ -58,16 +58,16 @@ export default function HomePage() {
         <h2 className="text-lg font-semibold mb-3">How it works</h2>
         <ul className="list-disc pl-5 space-y-2 text-[var(--muted)] text-sm">
           <li>
-            Join with your <strong className="text-white">name</strong> and
-            submit picks before{" "}
-            <strong className="text-white">11 June at 20:00</strong> (CEST).{" "}
-            <strong className="text-white">No login</strong> — use the same name
-            later to continue (see below).
+            Join with your <strong className="text-white">name</strong> and a{" "}
+            <strong className="text-white">password</strong>, then submit picks
+            before{" "}
+            <strong className="text-white">11 June at 20:00</strong> (CEST).
+            Use the same login on any device to continue.
           </li>
           <li>
             <strong className="text-white">Come back later:</strong> open{" "}
-            <strong className="text-white">My picks</strong>, enter the same
-            name if needed, and your saved picks load. Use{" "}
+            <strong className="text-white">My picks</strong>, enter your name
+            and password, and your saved picks load. Use{" "}
             <strong className="text-white">Save all picks</strong> before you
             close the browser.
           </li>
@@ -165,8 +165,8 @@ export default function HomePage() {
             </p>
           )}
           <p className="text-xs text-[var(--muted)] mt-2">
-            Remembered on this device. On another browser, enter your name on My
-            picks to load the same account.
+            Remembered on this device. On another browser, enter your name and
+            password on My picks to load the same account.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link

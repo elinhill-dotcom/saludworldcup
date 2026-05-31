@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findOrCreatePlayerByName, fetchPlayers } from "@/lib/supabase-players";
+import { authenticatePlayer, fetchPlayers } from "@/lib/supabase-players";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
@@ -12,12 +12,20 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const name = typeof body.name === "string" ? body.name : "";
+  const password = typeof body.password === "string" ? body.password : "";
 
-  const res = await findOrCreatePlayerByName(name);
+  if (!password) {
+    return NextResponse.json(
+      { error: "Enter your password." },
+      { status: 400 },
+    );
+  }
+
+  const res = await authenticatePlayer(name, password);
   if (res.error || !res.data) {
     return NextResponse.json(
-      { error: res.error ?? "Could not register" },
-      { status: res.error?.includes("2–80") ? 400 : 500 },
+      { error: res.error ?? "Could not sign in" },
+      { status: res.status ?? (res.error?.includes("2–80") ? 400 : 500) },
     );
   }
 

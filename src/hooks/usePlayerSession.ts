@@ -18,8 +18,8 @@ export function usePlayerSession() {
     setHydrated(true);
   }, []);
 
-  const continueAs = useCallback(async (name: string) => {
-    const result = await joinOrResumeByName(name);
+  const continueAs = useCallback(async (name: string, password: string) => {
+    const result = await joinOrResumeByName(name, password);
     if ("error" in result) return result;
     setPlayer(result.player);
     return result;

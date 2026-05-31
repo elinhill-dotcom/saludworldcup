@@ -4,6 +4,7 @@ export type PlayerRow = {
   id: string;
   name: string;
   created_at: string;
+  password_hash: string | null;
 };
 
 export type MatchRow = {

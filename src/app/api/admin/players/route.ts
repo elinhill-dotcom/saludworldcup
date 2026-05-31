@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { predictionsLocked } from "@/lib/config";
+import { clearPlayerPicks } from "@/lib/supabase-predictions";
 import {
-  clearPlayerPicks,
-} from "@/lib/supabase-predictions";
-import {
+  clearPlayerPassword,
   deletePlayer,
   fetchAdminPlayers,
   findPlayerById,
@@ -119,13 +118,31 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  if (body.action !== "clear-picks") {
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  }
-
   const playerId = body.playerId as string | undefined;
+
   if (!playerId) {
     return NextResponse.json({ error: "Missing playerId" }, { status: 400 });
+  }
+
+  if (body.action === "reset-password") {
+    const playerRes = await findPlayerById(playerId);
+    if (playerRes.error) {
+      return NextResponse.json({ error: playerRes.error }, { status: 500 });
+    }
+    if (!playerRes.data) {
+      return NextResponse.json({ error: "Player not found" }, { status: 404 });
+    }
+
+    const resetRes = await clearPlayerPassword(playerId);
+    if (resetRes.error) {
+      return NextResponse.json({ error: resetRes.error }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action !== "clear-picks") {
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
   if (predictionsLocked()) {

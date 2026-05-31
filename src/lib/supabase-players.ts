@@ -1,4 +1,9 @@
 import { GROUP_MATCH_IDS } from "@/lib/matches-data";
+import {
+  hashPassword,
+  validatePassword,
+  verifyPassword,
+} from "@/lib/player-password";
 import { mapPlayer } from "@/lib/supabase-mappers";
 import type { PlayerRow } from "@/lib/supabase-types";
 import {
@@ -12,37 +17,117 @@ function client(browser: boolean) {
   return browser ? getSupabaseBrowser() : getSupabaseServer();
 }
 
-export async function findOrCreatePlayerByName(
-  name: string,
-  browser = false,
-): Promise<DbResult<ReturnType<typeof mapPlayer>>> {
+function validateName(name: string): string | null {
   const trimmed = name.trim();
   if (trimmed.length < 2 || trimmed.length > 80) {
-    return { data: null, error: "Enter a name (2–80 characters)." };
+    return "Enter a name (2–80 characters).";
+  }
+  return null;
+}
+
+export async function lookupPlayerByName(
+  name: string,
+): Promise<DbResult<{ exists: boolean; hasPassword: boolean }>> {
+  const nameErr = validateName(name);
+  if (nameErr) {
+    return { data: { exists: false, hasPassword: false }, error: null };
   }
 
   try {
-    const supabase = client(browser);
+    const supabase = getSupabaseServer();
+    const { data, error } = await supabase
+      .from("players")
+      .select("password_hash")
+      .eq("name", name.trim())
+      .maybeSingle();
 
+    if (error) return { data: null, error: error.message };
+    if (!data) return { data: { exists: false, hasPassword: false }, error: null };
+    return {
+      data: { exists: true, hasPassword: !!data.password_hash },
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: toErrorMessage(e) };
+  }
+}
+
+export async function authenticatePlayer(
+  name: string,
+  password: string,
+): Promise<
+  DbResult<ReturnType<typeof mapPlayer>> & { status?: number }
+> {
+  const nameErr = validateName(name);
+  if (nameErr) return { data: null, error: nameErr, status: 400 };
+
+  const passwordErr = validatePassword(password);
+  if (passwordErr) return { data: null, error: passwordErr, status: 400 };
+
+  const trimmed = name.trim();
+
+  try {
+    const supabase = getSupabaseServer();
     const { data: existing, error: findErr } = await supabase
       .from("players")
       .select("*")
       .eq("name", trimmed)
       .maybeSingle();
 
-    if (findErr) return { data: null, error: findErr.message };
-    if (existing) {
-      return { data: mapPlayer(existing as PlayerRow), error: null };
+    if (findErr) return { data: null, error: findErr.message, status: 500 };
+
+    if (!existing) {
+      const { data: created, error: insErr } = await supabase
+        .from("players")
+        .insert({
+          name: trimmed,
+          password_hash: hashPassword(password),
+        })
+        .select()
+        .single();
+
+      if (insErr) return { data: null, error: insErr.message, status: 500 };
+      return { data: mapPlayer(created as PlayerRow), error: null };
     }
 
-    const { data: created, error: insErr } = await supabase
+    const row = existing as PlayerRow;
+    if (row.password_hash) {
+      if (!verifyPassword(password, row.password_hash)) {
+        return {
+          data: null,
+          error: "Wrong password for this name.",
+          status: 401,
+        };
+      }
+      return { data: mapPlayer(row), error: null };
+    }
+
+    const { data: updated, error: updErr } = await supabase
       .from("players")
-      .insert({ name: trimmed })
+      .update({ password_hash: hashPassword(password) })
+      .eq("id", row.id)
       .select()
       .single();
 
-    if (insErr) return { data: null, error: insErr.message };
-    return { data: mapPlayer(created as PlayerRow), error: null };
+    if (updErr) return { data: null, error: updErr.message, status: 500 };
+    return { data: mapPlayer(updated as PlayerRow), error: null };
+  } catch (e) {
+    return { data: null, error: toErrorMessage(e), status: 500 };
+  }
+}
+
+export async function clearPlayerPassword(
+  playerId: string,
+): Promise<DbResult<true>> {
+  try {
+    const supabase = getSupabaseServer();
+    const { error } = await supabase
+      .from("players")
+      .update({ password_hash: null })
+      .eq("id", playerId);
+
+    if (error) return { data: null, error: error.message };
+    return { data: true, error: null };
   } catch (e) {
     return { data: null, error: toErrorMessage(e) };
   }
@@ -93,6 +178,7 @@ export async function fetchAdminPlayers(): Promise<
       createdAt: string;
       groupPicksCount: number;
       hasKnockoutPick: boolean;
+      hasPassword: boolean;
     }[]
   >
 > {
@@ -122,6 +208,7 @@ export async function fetchAdminPlayers(): Promise<
       createdAt: row.created_at,
       groupPicksCount: groupCount.get(row.id) ?? 0,
       hasKnockoutPick: hasKo.has(row.id),
+      hasPassword: !!row.password_hash,
     }));
 
     return { data: players, error: null };

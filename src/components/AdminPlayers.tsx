@@ -8,6 +8,7 @@ type AdminPlayer = {
   createdAt: string;
   groupPicksCount: number;
   hasKnockoutPick: boolean;
+  hasPassword: boolean;
 };
 
 type Props = {
@@ -90,6 +91,29 @@ export function AdminPlayers({ password, onMessage }: Props) {
     load();
   }
 
+  async function resetPassword(playerId: string, playerName: string) {
+    if (
+      !confirm(
+        `Reset password for ${playerName}? They must set a new password on next login.`,
+      )
+    ) {
+      return;
+    }
+    onMessage("");
+    const res = await fetch("/api/admin/players", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ action: "reset-password", playerId }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      onMessage(data.error ?? "Reset failed", true);
+      return;
+    }
+    onMessage(`Password reset for ${playerName}.`);
+    load();
+  }
+
   async function remove(playerId: string, playerName: string) {
     if (
       !confirm(
@@ -167,6 +191,7 @@ export function AdminPlayers({ password, onMessage }: Props) {
                 Joined {new Date(p.createdAt).toLocaleString("en-GB")} · Group
                 picks {p.groupPicksCount}/72
                 {p.hasKnockoutPick ? " · Knockout filled" : " · No knockout picks"}
+                {p.hasPassword ? " · Password set" : " · No password yet"}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -176,6 +201,13 @@ export function AdminPlayers({ password, onMessage }: Props) {
                   className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-40"
                 >
                   Clear picks
+                </button>
+                <button
+                  type="button"
+                  onClick={() => resetPassword(p.id, p.name)}
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm"
+                >
+                  Reset password
                 </button>
                 <button
                   type="button"

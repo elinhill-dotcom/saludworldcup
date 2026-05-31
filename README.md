@@ -26,7 +26,9 @@ Next.js app for group-stage score predictions, knockout picks, leaderboard, supp
 
 ## Auth
 
-No Supabase Auth. Players enter a **display name** stored in `localStorage` (`wc2026_player`). The app creates or reuses a row in `players` by name.
+No Supabase Auth. Players sign in with a **display name + password** (stored as a hash in `players.password_hash`). The session is saved in `localStorage` (`wc2026_player`). Existing players without a password must set one on next login.
+
+If the `password_hash` column is missing on an existing database, run `supabase/add-password-hash.sql` in the SQL Editor.
 
 ## Realtime chat
 
