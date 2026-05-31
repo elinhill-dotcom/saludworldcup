@@ -22,6 +22,8 @@ import {
   type ChatPresenceUser,
 } from "@/lib/supabase-chat";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { MatchPoolInsight } from "@/components/MatchPoolInsight";
+import type { MatchPoolStats } from "@/lib/pool-stats";
 
 type MatchInfo = {
   id: number;
@@ -53,6 +55,7 @@ export function LiveChatRoom({ matchId }: Props) {
   const [connectionStatus, setConnectionStatus] = useState("");
   const [posting, setPosting] = useState(false);
   const [adminTestMode, setAdminTestMode] = useState(false);
+  const [poolInsight, setPoolInsight] = useState<MatchPoolStats | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const configured = isSupabaseConfigured();
   const sessionKeyRef = useRef<string>(
@@ -101,6 +104,7 @@ export function LiveChatRoom({ matchId }: Props) {
     setMatch(data.match);
     setLive(data.live);
     setAdminTestMode(Boolean(data.adminTestMode));
+    setPoolInsight(data.poolInsight ?? null);
     setMessages(data.messages ?? []);
     setLoading(false);
   }, [matchId, configured]);
@@ -309,6 +313,11 @@ export function LiveChatRoom({ matchId }: Props) {
             Admin test mode — chat is open for you only; colleagues still see
             the normal schedule.
           </p>
+        )}
+        {poolInsight && (
+          <div className="mt-3">
+            <MatchPoolInsight stats={poolInsight} variant="chat" />
+          </div>
         )}
       </div>
 

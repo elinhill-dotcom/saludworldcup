@@ -1,6 +1,6 @@
 export function getPredictionLockAt(): Date {
   const raw =
-    process.env.PREDICTION_LOCK_AT ?? "2026-06-11T21:00:00+02:00";
+    process.env.PREDICTION_LOCK_AT ?? "2026-06-11T20:00:00+02:00";
   return new Date(raw);
 }
 

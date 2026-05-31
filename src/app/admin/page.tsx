@@ -7,6 +7,7 @@ import {
   type KnockoutFormState,
 } from "@/components/KnockoutPickForm";
 import { AdminPlayers } from "@/components/AdminPlayers";
+import { AdminExport } from "@/components/AdminExport";
 import type { MatchView } from "@/components/MatchCard";
 import {
   clearAdminSession,
@@ -28,7 +29,7 @@ export default function AdminPage() {
     emptyKnockoutForm(),
   );
   const [filter, setFilter] = useState<"open" | "all">("open");
-  const [tab, setTab] = useState<"group" | "knockout" | "players">("group");
+  const [tab, setTab] = useState<"group" | "knockout" | "players" | "export">("group");
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
 
@@ -117,6 +118,30 @@ export default function AdminPage() {
       prev.map((m) => (m.id === matchId ? { ...m, ...data.match } : m)),
     );
     showMessage(`Result saved for match #${matchId}`);
+  }
+
+  async function resetResult(matchId: number) {
+    if (
+      !confirm(
+        `Reset result for match #${matchId}? Scores will be cleared and the match marked as not finished.`,
+      )
+    ) {
+      return;
+    }
+    showMessage("");
+    const res = await fetch(`/api/admin/result?matchId=${matchId}`, {
+      method: "DELETE",
+      headers: { "x-admin-password": password },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMessage(data.error ?? "Reset failed", true);
+      return;
+    }
+    setMatches((prev) =>
+      prev.map((m) => (m.id === matchId ? { ...m, ...data.match } : m)),
+    );
+    showMessage(`Result reset for match #${matchId}`);
   }
 
   async function saveKnockout() {
@@ -209,6 +234,17 @@ export default function AdminPage() {
         </button>
         <button
           type="button"
+          onClick={() => setTab("export")}
+          className={`rounded-lg px-3 py-1.5 text-sm ${
+            tab === "export"
+              ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
+              : "bg-[var(--card)]"
+          }`}
+        >
+          Export
+        </button>
+        <button
+          type="button"
           onClick={() => setTab("group")}
           className={`rounded-lg px-3 py-1.5 text-sm ${
             tab === "group"
@@ -230,6 +266,10 @@ export default function AdminPage() {
           Knockout answers
         </button>
       </div>
+
+      {tab === "export" && (
+        <AdminExport password={password} onMessage={showMessage} />
+      )}
 
       {tab === "players" && (
         <AdminPlayers password={password} onMessage={showMessage} />
@@ -268,6 +308,7 @@ export default function AdminPage() {
                 key={m.id}
                 match={m}
                 onSave={saveResult}
+                onReset={resetResult}
               />
             ))}
           </div>
@@ -301,9 +342,11 @@ export default function AdminPage() {
 function AdminMatchRow({
   match,
   onSave,
+  onReset,
 }: {
   match: MatchView;
   onSave: (id: number, h: number, a: number) => void;
+  onReset: (id: number) => void;
 }) {
   const [home, setHome] = useState(
     match.homeScore !== null ? String(match.homeScore) : "0",
@@ -351,7 +394,16 @@ function AdminMatchRow({
           {match.finished ? "Update" : "Save result"}
         </button>
         {match.finished && (
-          <span className="text-xs text-[var(--muted)]">Done</span>
+          <>
+            <span className="text-xs text-[var(--muted)]">Done</span>
+            <button
+              type="button"
+              onClick={() => onReset(match.id)}
+              className="rounded-lg border border-[var(--danger)]/50 text-[var(--danger)] px-3 py-1.5 text-sm hover:bg-[var(--danger)]/10"
+            >
+              Reset result
+            </button>
+          </>
         )}
       </div>
     </div>

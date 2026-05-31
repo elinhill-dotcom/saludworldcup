@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminPassword, requireAdmin } from "@/lib/admin-auth";
-import { verifyAdminPassword } from "@/lib/config";
+import { verifyAdminPassword, predictionsLocked } from "@/lib/config";
+import { fetchMatchPoolStats } from "@/lib/match-pool-stats";
 import { isMatchLive } from "@/lib/match-live";
 import { fetchMatchById } from "@/lib/supabase-matches";
 import { insertChatMessage, loadChatMessages } from "@/lib/supabase-chat";
@@ -40,6 +41,14 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
   const adminTestMode = verifyAdminPassword(getAdminPassword(req));
   const live = adminTestMode || isMatchLive(match.kickoffAt);
 
+  let poolInsight = null;
+  if (predictionsLocked()) {
+    const insightRes = await fetchMatchPoolStats(matchId);
+    if (insightRes.data && insightRes.data.pickCount > 0) {
+      poolInsight = insightRes.data;
+    }
+  }
+
   return NextResponse.json({
     match: {
       id: match.id,
@@ -54,6 +63,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
     },
     live,
     adminTestMode,
+    poolInsight,
     messages: msgRes.data ?? [],
   });
 }

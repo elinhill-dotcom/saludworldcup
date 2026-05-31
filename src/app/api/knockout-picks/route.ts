@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   if (predictionsLocked()) {
     return NextResponse.json(
-      { error: "Picks are locked — the tournament has started." },
+      { error: "Picks are locked — no bets after 11 June at 20:00." },
       { status: 403 },
     );
   }

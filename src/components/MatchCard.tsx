@@ -72,29 +72,38 @@ export function MatchCard({
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <span className="text-right font-semibold">{match.homeTeam}</span>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={0}
-            max={20}
-            value={predHome}
-            disabled={locked}
-            onChange={(e) => onChange(e.target.value, predAway)}
-            className="w-12 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-2 text-center"
-            aria-label={`${match.homeTeam} goals`}
-          />
-          <span className="text-[var(--muted)]">–</span>
-          <input
-            type="number"
-            min={0}
-            max={20}
-            value={predAway}
-            disabled={locked}
-            onChange={(e) => onChange(predHome, e.target.value)}
-            className="w-12 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-2 text-center"
-            aria-label={`${match.awayTeam} goals`}
-          />
-        </div>
+        {locked ? (
+          <div
+            className="flex items-center gap-2 font-semibold tabular-nums"
+            aria-label="Your pick (locked)"
+          >
+            <span className="w-12 text-center">{predHome || "—"}</span>
+            <span className="text-[var(--muted)]">–</span>
+            <span className="w-12 text-center">{predAway || "—"}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={20}
+              value={predHome}
+              onChange={(e) => onChange(e.target.value, predAway)}
+              className="w-12 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-2 text-center"
+              aria-label={`${match.homeTeam} goals`}
+            />
+            <span className="text-[var(--muted)]">–</span>
+            <input
+              type="number"
+              min={0}
+              max={20}
+              value={predAway}
+              onChange={(e) => onChange(predHome, e.target.value)}
+              className="w-12 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-2 text-center"
+              aria-label={`${match.awayTeam} goals`}
+            />
+          </div>
+        )}
         <span className="font-semibold">{match.awayTeam}</span>
       </div>
 

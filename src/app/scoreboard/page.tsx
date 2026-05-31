@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PlayerStatsModal } from "@/components/PlayerStatsModal";
 import { SupporterWall } from "@/components/SupporterWall";
+import type { PlayerPoolStats } from "@/lib/pool-stats";
 
 type Entry = {
   playerId: string;
@@ -19,6 +21,12 @@ export default function ScoreboardPage() {
   const [jarTotalEur, setJarTotalEur] = useState(0);
   const [jarContributionEur, setJarContributionEur] = useState(10);
   const [playerCount, setPlayerCount] = useState(0);
+  const [playerStats, setPlayerStats] = useState<Map<string, PlayerPoolStats>>(
+    new Map(),
+  );
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerPoolStats | null>(
+    null,
+  );
 
   useEffect(() => {
     fetch("/api/leaderboard")
@@ -28,6 +36,18 @@ export default function ScoreboardPage() {
         setJarTotalEur(data.jarTotalEur);
         setJarContributionEur(data.jarContributionEur);
         setPlayerCount(data.playerCount);
+      });
+
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.locked && data.players) {
+          setPlayerStats(
+            new Map(
+              (data.players as PlayerPoolStats[]).map((p) => [p.playerId, p]),
+            ),
+          );
+        }
       });
   }, []);
 
@@ -74,7 +94,21 @@ export default function ScoreboardPage() {
                       }`}
                     >
                       <td className="px-4 py-3 font-medium">{i + 1}</td>
-                      <td className="px-4 py-3 font-semibold">{e.name}</td>
+                      <td className="px-4 py-3 font-semibold">
+                        {playerStats.has(e.playerId) ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedPlayer(playerStats.get(e.playerId)!)
+                            }
+                            className="text-[var(--accent)] hover:underline"
+                          >
+                            {e.name}
+                          </button>
+                        ) : (
+                          e.name
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right text-[var(--accent)] font-bold">
                         {e.points}
                       </td>
@@ -97,11 +131,23 @@ export default function ScoreboardPage() {
           <p className="text-xs text-[var(--muted)] mt-3">
             Tie-break: most exact group scores. Split the jar as you agree (e.g.
             60% / 30% / 10% for top 3).
+            {playerStats.size > 0 && (
+              <span className="block mt-1">
+                Tap a name for player stats.
+              </span>
+            )}
           </p>
         </section>
       </div>
 
       <SupporterWall />
+
+      {selectedPlayer && (
+        <PlayerStatsModal
+          player={selectedPlayer}
+          onClose={() => setSelectedPlayer(null)}
+        />
+      )}
     </div>
   );
 }

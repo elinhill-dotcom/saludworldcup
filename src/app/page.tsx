@@ -59,7 +59,8 @@ export default function HomePage() {
         <ul className="list-disc pl-5 space-y-2 text-[var(--muted)] text-sm">
           <li>
             Join with your <strong className="text-white">name</strong> and
-            submit picks before kickoff on 11 June.{" "}
+            submit picks before{" "}
+            <strong className="text-white">11 June at 20:00</strong> (CEST).{" "}
             <strong className="text-white">No login</strong> — use the same name
             later to continue (see below).
           </li>
@@ -121,13 +122,26 @@ export default function HomePage() {
           </li>
         </ul>
         {config?.locked && (
-          <p className="mt-4 rounded-lg bg-[var(--danger)]/20 text-[var(--danger)] px-4 py-2 text-sm">
-            Picks are locked — the tournament has started.
-          </p>
+          <div className="mt-4 space-y-2">
+            <p className="rounded-lg bg-[var(--danger)]/20 text-[var(--danger)] px-4 py-2 text-sm">
+              Picks are locked — no more bets after 11 June at 20:00.
+            </p>
+            <p className="text-sm text-[var(--muted)]">
+              See what the office predicted on{" "}
+              <Link
+                href="/stats"
+                className="font-semibold text-[var(--accent)] hover:underline"
+              >
+                How has Salud bet?
+              </Link>
+              .
+            </p>
+          </div>
         )}
         {!config?.locked && lockLabel && (
           <p className="mt-4 text-sm text-[var(--muted)]">
-            Picks lock: {lockLabel}
+            All picks lock on <strong className="text-white">11 June at 20:00</strong>{" "}
+            ({lockLabel}) — no bets accepted after that.
           </p>
         )}
       </section>
@@ -167,6 +181,14 @@ export default function HomePage() {
             >
               Scoreboard
             </Link>
+            {config?.locked && (
+              <Link
+                href="/stats"
+                className="rounded-lg border border-[var(--accent)]/50 px-5 py-2 text-[var(--accent)]"
+              >
+                How has Salud bet?
+              </Link>
+            )}
             <button
               type="button"
               onClick={signOut}

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KnockoutPickForm } from "@/components/KnockoutPickForm";
 import {
   emptyKnockoutForm,
   type KnockoutFormState,
 } from "@/lib/knockout-picks";
 import { ContinueAsPlayer } from "@/components/ContinueAsPlayer";
+import { MatchPoolInsight } from "@/components/MatchPoolInsight";
 import { MatchCard, type MatchView } from "@/components/MatchCard";
 import { PicksChecklist } from "@/components/PicksChecklist";
 import { usePlayerSession } from "@/hooks/usePlayerSession";
@@ -16,6 +17,7 @@ import {
   isKnockoutComplete,
 } from "@/lib/knockout-picks";
 import type { StoredPlayer } from "@/lib/player-storage";
+import type { MatchPoolStats } from "@/lib/pool-stats";
 
 type PredMap = Record<number, { home: string; away: string }>;
 
@@ -33,6 +35,10 @@ export default function PicksPage() {
   const [message, setMessage] = useState("");
   const [messageWarn, setMessageWarn] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const wasLockedRef = useRef(false);
+  const [poolByMatch, setPoolByMatch] = useState<Map<number, MatchPoolStats>>(
+    new Map(),
+  );
 
   const load = useCallback(async (playerId: string) => {
     setLoadError("");
@@ -62,6 +68,23 @@ export default function PicksPage() {
 
     setMatches(ms ?? []);
     setLocked(cfg.locked);
+    wasLockedRef.current = cfg.locked ?? false;
+
+    if (cfg.locked) {
+      fetch("/api/stats")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.locked && data.matches) {
+            setPoolByMatch(
+              new Map(
+                (data.matches as MatchPoolStats[]).map((m) => [m.matchId, m]),
+              ),
+            );
+          }
+        });
+    } else {
+      setPoolByMatch(new Map());
+    }
 
     const map: PredMap = {};
     for (const m of ms as MatchView[]) {
@@ -92,6 +115,40 @@ export default function PicksPage() {
 
   useEffect(() => {
     if (player) load(player.id);
+  }, [player, load]);
+
+  useEffect(() => {
+    if (!player) return;
+
+    const refreshLock = async () => {
+      const res = await fetch("/api/config");
+      const cfg = await res.json();
+      const nowLocked = cfg.locked ?? false;
+      if (nowLocked && !wasLockedRef.current) {
+        await load(player.id);
+        const statsRes = await fetch("/api/stats");
+        const statsData = await statsRes.json();
+        if (statsData.locked && statsData.matches) {
+          setPoolByMatch(
+            new Map(
+              (statsData.matches as MatchPoolStats[]).map((m) => [
+                m.matchId,
+                m,
+              ]),
+            ),
+          );
+        }
+      }
+      if (!nowLocked) {
+        setPoolByMatch(new Map());
+      }
+      wasLockedRef.current = nowLocked;
+      setLocked(nowLocked);
+    };
+
+    refreshLock();
+    const id = setInterval(refreshLock, 30000);
+    return () => clearInterval(id);
   }, [player, load]);
 
   const filtered = useMemo(() => {
@@ -127,7 +184,7 @@ export default function PicksPage() {
   const knockoutDone = isKnockoutComplete(knockout);
 
   async function save() {
-    if (!player) return;
+    if (!player || locked) return;
     setSaving(true);
     setMessage("");
     setMessageWarn(false);
@@ -250,7 +307,8 @@ export default function PicksPage() {
 
       {locked && (
         <p className="rounded-lg bg-[var(--danger)]/20 text-[var(--danger)] px-4 py-2 text-sm">
-          Picks are locked — view only.
+          Picks are locked — you cannot add or change any picks after 11 June at
+          20:00. View only.
         </p>
       )}
 
@@ -345,20 +403,29 @@ export default function PicksPage() {
               </h3>
               <div className="space-y-3">
                 {dayMatches.map((m) => (
-                  <MatchCard
-                    key={m.id}
-                    match={m}
-                    predHome={preds[m.id]?.home ?? ""}
-                    predAway={preds[m.id]?.away ?? ""}
-                    locked={locked}
-                    showResult
-                    onChange={(home, away) =>
-                      setPreds((prev) => ({
-                        ...prev,
-                        [m.id]: { home, away },
-                      }))
-                    }
-                  />
+                  <div key={m.id} className="space-y-2">
+                    <MatchCard
+                      match={m}
+                      predHome={preds[m.id]?.home ?? ""}
+                      predAway={preds[m.id]?.away ?? ""}
+                      locked={locked}
+                      showResult
+                      onChange={(home, away) =>
+                        setPreds((prev) => ({
+                          ...prev,
+                          [m.id]: { home, away },
+                        }))
+                      }
+                    />
+                    {locked && poolByMatch.has(m.id) && (
+                      <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]/60 px-4 py-3">
+                        <MatchPoolInsight
+                          stats={poolByMatch.get(m.id)!}
+                          variant="compact"
+                        />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </section>

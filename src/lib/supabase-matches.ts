@@ -95,3 +95,26 @@ export async function updateMatchResult(
     return { data: null, error: toErrorMessage(e) };
   }
 }
+
+export async function resetMatchResult(
+  matchId: number,
+): Promise<DbResult<ReturnType<typeof mapMatch>>> {
+  try {
+    const supabase = getSupabaseServer();
+    const { data, error } = await supabase
+      .from("matches")
+      .update({
+        home_score: null,
+        away_score: null,
+        finished: false,
+      })
+      .eq("id", matchId)
+      .select()
+      .single();
+
+    if (error) return { data: null, error: error.message };
+    return { data: mapMatch(data as MatchRow), error: null };
+  } catch (e) {
+    return { data: null, error: toErrorMessage(e) };
+  }
+}

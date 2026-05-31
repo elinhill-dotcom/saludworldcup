@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { MatchPoolInsight } from "@/components/MatchPoolInsight";
 import { formatCestMatchKickoff } from "@/lib/datetime";
 import { winnerLabel } from "@/lib/pick-feedback";
+import type { MatchPoolStats } from "@/lib/pool-stats";
 import type { MatchView } from "@/components/MatchCard";
 
 export default function ResultsPage() {
   const [matches, setMatches] = useState<MatchView[]>([]);
+  const [poolByMatch, setPoolByMatch] = useState<Map<number, MatchPoolStats>>(
+    new Map(),
+  );
+  const [picksLocked, setPicksLocked] = useState(false);
   const [filter, setFilter] = useState<"all" | "finished" | "upcoming">("all");
   const [group, setGroup] = useState<string>("all");
 
@@ -14,6 +20,19 @@ export default function ResultsPage() {
     fetch("/api/matches?stage=group")
       .then((r) => r.json())
       .then((d) => setMatches(d.matches ?? []));
+
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((data) => {
+        setPicksLocked(data.locked ?? false);
+        if (data.locked && data.matches) {
+          setPoolByMatch(
+            new Map(
+              (data.matches as MatchPoolStats[]).map((m) => [m.matchId, m]),
+            ),
+          );
+        }
+      });
   }, []);
 
   const groups = useMemo(() => {
@@ -52,6 +71,12 @@ export default function ResultsPage() {
           match — check <strong className="text-white">My picks</strong> to see
           if you got the winner right.
         </p>
+        {picksLocked && (
+          <p className="text-sm text-[var(--accent)] mt-2">
+            Office predictions shown under each match — what Salud collectively
+            thinks.
+          </p>
+        )}
         <p className="text-sm text-[var(--accent)] mt-1">
           {finishedCount} / {matches.length} matches completed
         </p>
@@ -100,56 +125,54 @@ export default function ResultsPage() {
             <h3 className="text-sm font-semibold text-[var(--accent)] mb-3">
               {day}
             </h3>
-            <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--card)] text-left text-[var(--muted)]">
-                  <tr>
-                    <th className="px-4 py-3">Match</th>
-                    <th className="px-4 py-3 text-center">Result</th>
-                    <th className="px-4 py-3">Outcome</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Group</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dayMatches.map((m) => (
-                    <tr
-                      key={m.id}
-                      className="border-t border-[var(--border)]"
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-medium">
+            <div className="space-y-3">
+              {dayMatches.map((m) => {
+                const pool = poolByMatch.get(m.id);
+                return (
+                  <article
+                    key={m.id}
+                    className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-lg">
                           {m.homeTeam} – {m.awayTeam}
                         </p>
-                        <p className="text-xs text-[var(--muted)]">
+                        <p className="text-xs text-[var(--muted)] mt-1">
                           {formatCestMatchKickoff(m.kickoffAt)}
+                          {m.groupCode ? ` · Group ${m.groupCode}` : ""}
                         </p>
-                      </td>
-                      <td className="px-4 py-3 text-center font-bold text-[var(--accent)]">
-                        {m.finished &&
-                        m.homeScore !== null &&
-                        m.awayScore !== null
-                          ? `${m.homeScore}–${m.awayScore}`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--muted)]">
-                        {m.finished &&
-                        m.homeScore !== null &&
-                        m.awayScore !== null
-                          ? winnerLabel(
-                              m.homeScore,
-                              m.awayScore,
-                              m.homeTeam,
-                              m.awayTeam,
-                            )
-                          : "Pending"}
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell text-[var(--muted)]">
-                        {m.groupCode ? `Group ${m.groupCode}` : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-[var(--accent)]">
+                          {m.finished &&
+                          m.homeScore !== null &&
+                          m.awayScore !== null
+                            ? `${m.homeScore}–${m.awayScore}`
+                            : "—"}
+                        </p>
+                        <p className="text-xs text-[var(--muted)] mt-1">
+                          {m.finished &&
+                          m.homeScore !== null &&
+                          m.awayScore !== null
+                            ? winnerLabel(
+                                m.homeScore,
+                                m.awayScore,
+                                m.homeTeam,
+                                m.awayTeam,
+                              )
+                            : "Not played yet"}
+                        </p>
+                      </div>
+                    </div>
+                    {picksLocked && pool && (
+                      <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                        <MatchPoolInsight stats={pool} variant="card" />
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           </section>
         ))
