@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatCestDateTime } from "@/lib/datetime";
 import { ContinueAsPlayer } from "@/components/ContinueAsPlayer";
 import { usePlayerSession } from "@/hooks/usePlayerSession";
+import { playerAuthHeaders } from "@/lib/player-session-storage";
 
 type Config = {
   locked: boolean;
@@ -43,7 +44,9 @@ export default function HomePage() {
       setProgress(null);
       return;
     }
-    fetch(`/api/players/progress?playerId=${player.id}`)
+    fetch(`/api/players/progress?playerId=${player.id}`, {
+      headers: playerAuthHeaders(),
+    })
       .then((r) => r.json())
       .then(setProgress);
   }, [player]);

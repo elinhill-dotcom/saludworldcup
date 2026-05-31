@@ -21,6 +21,7 @@ export default function ScoreboardPage() {
   const [jarTotalEur, setJarTotalEur] = useState(0);
   const [jarContributionEur, setJarContributionEur] = useState(10);
   const [playerCount, setPlayerCount] = useState(0);
+  const [picksLocked, setPicksLocked] = useState(false);
   const [playerStats, setPlayerStats] = useState<Map<string, PlayerPoolStats>>(
     new Map(),
   );
@@ -38,18 +39,33 @@ export default function ScoreboardPage() {
         setPlayerCount(data.playerCount);
       });
 
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((cfg) => {
+        const locked = cfg.locked ?? false;
+        setPicksLocked(locked);
+        if (!locked) {
+          setPlayerStats(new Map());
+        }
+      });
+
     fetch("/api/stats")
       .then((r) => r.json())
       .then((data) => {
         if (data.locked && data.players) {
+          setPicksLocked(true);
           setPlayerStats(
             new Map(
               (data.players as PlayerPoolStats[]).map((p) => [p.playerId, p]),
             ),
           );
+        } else {
+          setPlayerStats(new Map());
         }
       });
   }, []);
+
+  const canViewPlayerStats = picksLocked;
 
   return (
     <div className="scoreboard-page">
@@ -95,7 +111,7 @@ export default function ScoreboardPage() {
                     >
                       <td className="px-4 py-3 font-medium">{i + 1}</td>
                       <td className="px-4 py-3 font-semibold">
-                        {playerStats.has(e.playerId) ? (
+                        {canViewPlayerStats && playerStats.has(e.playerId) ? (
                           <button
                             type="button"
                             onClick={() =>
@@ -131,9 +147,15 @@ export default function ScoreboardPage() {
           <p className="text-xs text-[var(--muted)] mt-3">
             Tie-break: most exact group scores. Split the jar as you agree (e.g.
             60% / 30% / 10% for top 3).
-            {playerStats.size > 0 && (
+            {canViewPlayerStats && playerStats.size > 0 && (
               <span className="block mt-1">
                 Tap a name for player stats.
+              </span>
+            )}
+            {!canViewPlayerStats && (
+              <span className="block mt-1">
+                Player details unlock after all picks are locked on 11 June at
+                20:00.
               </span>
             )}
           </p>
@@ -142,9 +164,10 @@ export default function ScoreboardPage() {
 
       <SupporterWall />
 
-      {selectedPlayer && (
+      {selectedPlayer && canViewPlayerStats && (
         <PlayerStatsModal
           player={selectedPlayer}
+          showTips
           onClose={() => setSelectedPlayer(null)}
         />
       )}

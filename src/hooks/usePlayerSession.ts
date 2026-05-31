@@ -8,6 +8,7 @@ import {
   setStoredPlayer,
   type StoredPlayer,
 } from "@/lib/player-storage";
+import { clearPlayerSessionPassword } from "@/lib/player-session-storage";
 
 export function usePlayerSession() {
   const [player, setPlayer] = useState<StoredPlayer | null>(null);
@@ -27,6 +28,7 @@ export function usePlayerSession() {
 
   const signOut = useCallback(() => {
     clearStoredPlayer();
+    clearPlayerSessionPassword();
     setPlayer(null);
   }, []);
 

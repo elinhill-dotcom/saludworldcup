@@ -4,10 +4,11 @@ import type { PlayerPoolStats } from "@/lib/pool-stats";
 
 type Props = {
   player: PlayerPoolStats;
+  showTips?: boolean;
   onClose: () => void;
 };
 
-export function PlayerStatsModal({ player, onClose }: Props) {
+export function PlayerStatsModal({ player, showTips = false, onClose }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
@@ -74,8 +75,8 @@ export function PlayerStatsModal({ player, onClose }: Props) {
         <div className="mt-4 pt-4 border-t border-[var(--border)] text-sm">
           <p className="text-[var(--muted)]">Champion pick</p>
           <p className="font-semibold mt-1">
-            {player.championPick ?? "—"}
-            {!player.knockoutComplete && (
+            {showTips ? (player.championPick ?? "—") : "Hidden until 11 June at 20:00"}
+            {showTips && !player.knockoutComplete && (
               <span className="block text-xs text-[var(--muted)] font-normal mt-1">
                 Knockout picks incomplete
               </span>

@@ -1,4 +1,5 @@
 import { setStoredPlayer, type StoredPlayer } from "./player-storage";
+import { setPlayerSessionPassword } from "./player-session-storage";
 
 export async function joinOrResumeByName(
   name: string,
@@ -16,6 +17,7 @@ export async function joinOrResumeByName(
   }
   const player = data.player as StoredPlayer;
   setStoredPlayer(player);
+  setPlayerSessionPassword(password);
   return { player };
 }
 

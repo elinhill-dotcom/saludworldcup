@@ -18,6 +18,7 @@ import {
 } from "@/lib/knockout-picks";
 import type { StoredPlayer } from "@/lib/player-storage";
 import type { MatchPoolStats } from "@/lib/pool-stats";
+import { playerAuthHeaders } from "@/lib/player-session-storage";
 
 type PredMap = Record<number, { home: string; away: string }>;
 
@@ -42,10 +43,11 @@ export default function PicksPage() {
 
   const load = useCallback(async (playerId: string) => {
     setLoadError("");
+    const authHeaders = playerAuthHeaders();
     const [mRes, pRes, kRes, cRes] = await Promise.all([
       fetch("/api/matches?stage=group"),
-      fetch(`/api/predictions?playerId=${playerId}`),
-      fetch(`/api/knockout-picks?playerId=${playerId}`),
+      fetch(`/api/predictions?playerId=${playerId}`, { headers: authHeaders }),
+      fetch(`/api/knockout-picks?playerId=${playerId}`, { headers: authHeaders }),
       fetch("/api/config"),
     ]);
     const mData = await mRes.json();

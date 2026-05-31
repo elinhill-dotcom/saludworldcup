@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { predictionsLocked } from "@/lib/config";
+import { canReadPlayerData } from "@/lib/player-auth";
 import { findPlayerById } from "@/lib/supabase-players";
 import {
   loadGroupPredictions,
@@ -18,6 +19,18 @@ export async function GET(req: NextRequest) {
   const playerId = req.nextUrl.searchParams.get("playerId");
   if (!playerId) {
     return NextResponse.json({ error: "Missing playerId" }, { status: 400 });
+  }
+
+  const password = req.headers.get("x-player-password");
+  const access = await canReadPlayerData(playerId, password);
+  if (access.error) {
+    return NextResponse.json({ error: access.error }, { status: 500 });
+  }
+  if (!access.data) {
+    return NextResponse.json(
+      { error: "Picks are hidden until 11 June at 20:00 — log in to see your own." },
+      { status: 403 },
+    );
   }
 
   const res = await loadGroupPredictions(playerId);

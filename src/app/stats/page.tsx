@@ -297,6 +297,7 @@ export default function StatsPage() {
       {selectedPlayer && (
         <PlayerStatsModal
           player={selectedPlayer}
+          showTips
           onClose={() => setSelectedPlayer(null)}
         />
       )}
