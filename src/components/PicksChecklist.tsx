@@ -43,6 +43,17 @@ export function PicksChecklist({
         </p>
       </div>
 
+      {!locked && (
+        <p className="text-sm rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3 text-[var(--muted)]">
+          <strong className="text-white">Take your time.</strong> You don&apos;t
+          need to fill everything in one go — do a few matches, then click{" "}
+          <strong className="text-white">Save all picks</strong> so your progress
+          is stored. Come back anytime with your name and password to continue.
+          You can change any pick until{" "}
+          <strong className="text-white">11 June at 20:00</strong>.
+        </p>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
         <StepCard
           step={1}

@@ -365,7 +365,8 @@ export default function PicksPage() {
         <>
           <p className="text-sm text-[var(--muted)]">
             Predict the <strong className="text-white">score</strong> for every
-            group match. Then go to Step 2 for semifinals, final, and bronze.
+            group match — you can do a few at a time and save. Then go to Step 2
+            for semifinals, final, and bronze.
           </p>
           <div className="flex flex-wrap gap-2">
             {(
