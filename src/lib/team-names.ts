@@ -51,8 +51,10 @@ export const TEAM_SV_TO_EN: Record<string, string> = {
 };
 
 export function toEnglishTeam(name: string): string {
-  if (TEAM_SV_TO_EN[name]) return TEAM_SV_TO_EN[name];
-  return name
-    .replace(/^Vinnare\b/i, "Winner")
-    .replace(/^Förlorare\b/i, "Loser");
+  const trimmed = name.trim();
+  if (!trimmed) return name;
+  if (TEAM_SV_TO_EN[trimmed]) return TEAM_SV_TO_EN[trimmed];
+  return trimmed
+    .replace(/^Vinnare\b/gi, "Winner")
+    .replace(/^Förlorare\b/gi, "Loser");
 }

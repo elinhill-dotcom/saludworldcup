@@ -32,7 +32,7 @@ If the `password_hash` column is missing on an existing database, run `supabase/
 
 ## Realtime chat
 
-`match_chat_messages` is in the Realtime publication (see schema). Chat opens 15 minutes before kickoff and closes 2 hours after.
+`match_chat_messages` is in the Realtime publication (see schema). Chat opens 15 minutes before kickoff and closes 3 hours after (extra time included). Constants live in `src/lib/match-live.ts`.
 
 ## Admin
 

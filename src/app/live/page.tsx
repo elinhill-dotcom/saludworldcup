@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { isAdminLoggedIn } from "@/lib/admin-session";
 import { formatCestMatchKickoff } from "@/lib/datetime";
+import { describeChatWindow } from "@/lib/match-live";
 
 type LiveMatch = {
   id: number;
@@ -84,20 +85,18 @@ export default function LivePage() {
           Match chat
         </h2>
         <p className="text-sm text-[var(--muted)] mt-2">
-          Chat opens <strong className="text-white">15 minutes before</strong>{" "}
-          kickoff and stays open until{" "}
-          <strong className="text-white">2 hours after</strong> kickoff. Chat with
-          colleagues — match results are posted later on the Results page.
+          {describeChatWindow().livePage} Chat with colleagues — match results
+          are posted later on the Results page.
         </p>
       </section>
 
       {admin && testMatches.length > 0 && (
         <section className="space-y-3">
           <h3 className="text-sm font-semibold text-amber-300">
-            Admin — test chat (any match)
+            Elin — test chat (any match)
           </h3>
           <p className="text-xs text-[var(--muted)]">
-            You are logged in on Admin. Open any match below to test live chat
+            You are logged in as Elin. Open any match below to test live chat
             outside the normal window.
           </p>
           <ul className="space-y-3">
@@ -110,8 +109,7 @@ export default function LivePage() {
 
       {live.length === 0 ? (
         <p className="text-[var(--muted)] rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-          No matches are live right now. Chat opens 15 minutes before kickoff and
-          closes 2 hours after kickoff.
+          No matches are live right now. {describeChatWindow().short}.
         </p>
       ) : (
         <section className="space-y-3">

@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatCestDateTime } from "@/lib/datetime";
 import { ContinueAsPlayer } from "@/components/ContinueAsPlayer";
+import { PrizeSplit } from "@/components/PrizeSplit";
 import { usePlayerSession } from "@/hooks/usePlayerSession";
 import { playerAuthHeaders } from "@/lib/player-session-storage";
 
 type Config = {
   locked: boolean;
   lockAt: string;
+  chatScheduleShort?: string;
   jarContributionEur: number;
   pointsExact: number;
   pointsOutcome: number;
@@ -57,8 +59,59 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
+      <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--card)] p-6">
+        <h2 className="text-lg font-semibold mb-3">Part of the community — no login needed</h2>
+        <PrizeSplit
+          jarEur={config?.jarContributionEur ?? 10}
+          showTieBreak
+          className="text-sm text-[var(--muted)] mb-4 rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 px-4 py-3"
+        />
+        <p className="text-sm text-[var(--muted)] mb-4">
+          You don&apos;t have to bet in the pool to join in. If you&apos;d rather
+          skip the €{config?.jarContributionEur ?? 10} entry,{" "}
+          <strong className="text-white">you don&apos;t need to log in</strong> — just
+          pick a name when you comment or chat. You can still:
+        </p>
+        <ul className="text-sm space-y-2 mb-4">
+          <li>
+            <Link href="/scoreboard" className="text-[var(--accent)] hover:underline font-medium">
+              Scoreboard
+            </Link>
+            <span className="text-[var(--muted)]"> — standings and the supporter wall</span>
+          </li>
+          <li>
+            <Link href="/results" className="text-[var(--accent)] hover:underline font-medium">
+              Results
+            </Link>
+            <span className="text-[var(--muted)]"> — full match schedule and scores</span>
+          </li>
+          <li>
+            <Link href="/live" className="text-[var(--accent)] hover:underline font-medium">
+              Live chat
+            </Link>
+            <span className="text-[var(--muted)]"> — chat during matches (name only, no password)</span>
+          </li>
+        </ul>
+        <p className="text-xs text-[var(--muted)]">
+          Only <strong className="text-white">My picks</strong> requires a name and password
+          — for anyone playing in the pool. Forgot your password?{" "}
+          <Link href="/admin" className="text-[var(--accent)] hover:underline">
+            Contact Elin
+          </Link>
+          .
+        </p>
+      </section>
+
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-        <h2 className="text-lg font-semibold mb-3">How it works</h2>
+        <h2 className="text-lg font-semibold mb-3">Playing in the pool — login required</h2>
+        <p className="text-sm text-[var(--muted)] mb-4">
+          Want to bet and compete for the jar? You must{" "}
+          <strong className="text-white">log in with name and password</strong> on{" "}
+          <Link href="/picks" className="text-[var(--accent)] hover:underline font-medium">
+            My picks
+          </Link>{" "}
+          (see the form below if you are not logged in yet).
+        </p>
         <ul className="list-disc pl-5 space-y-2 text-[var(--muted)] text-sm">
           <li>
             Join with your <strong className="text-white">name</strong> and a{" "}
@@ -85,10 +138,11 @@ export default function HomePage() {
             stage!
           </li>
           <li>
-            Entry:{" "}
-            <strong className="text-[var(--accent)]">
-              €{config?.jarContributionEur ?? 10} in the office jar
-            </strong>
+            <PrizeSplit
+              jarEur={config?.jarContributionEur ?? 10}
+              showTieBreak
+              className="text-[var(--muted)]"
+            />
           </li>
           <li>
             Group points:{" "}
@@ -112,16 +166,16 @@ export default function HomePage() {
             are highlighted on the picks page.
           </li>
           <li>
-            <strong className="text-white">Live chat:</strong> opens{" "}
-            <strong className="text-white">15 min before</strong> kickoff, closes{" "}
-            <strong className="text-white">2 hours after</strong> kickoff — enter
-            your name and chat with colleagues during the match.
+            <strong className="text-white">Live chat:</strong>{" "}
+            {config?.chatScheduleShort ??
+              "opens 15 minutes before kickoff, until 3 hours after kickoff (extra time included)"}
+            .
           </li>
           <li>
             <strong className="text-white">Results:</strong> see all match
             scores on the <strong className="text-white">Results</strong> page
             after games are played. On <strong className="text-white">My picks</strong>{" "}
-            you’ll see if your winner was right or wrong.
+            you&apos;ll see if your winner was right or wrong.
           </li>
         </ul>
         {config?.locked && (
@@ -202,10 +256,20 @@ export default function HomePage() {
           </div>
         </section>
       ) : (
-        <ContinueAsPlayer
-          title="Join the pool"
-          onContinue={remember}
-        />
+        <section className="space-y-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-6">
+          <h2 className="text-lg font-semibold">Join the pool — log in here</h2>
+          <p className="text-sm text-[var(--muted)]">
+            To take part in the betting you need to{" "}
+            <strong className="text-white">log in below</strong> with your name and
+            password. This saves your picks and lets you continue on any device.
+            Not betting? You can skip this — use the scoreboard, results, and live
+            chat without logging in.
+          </p>
+          <ContinueAsPlayer
+            title="Log in to your picks"
+            onContinue={remember}
+          />
+        </section>
       )}
 
       <section className="text-sm text-[var(--muted)]">

@@ -1,4 +1,4 @@
-import { isMatchLive } from "@/lib/match-live";
+import { describeChatWindow, isMatchLive } from "@/lib/match-live";
 import { mapChatMessage } from "@/lib/supabase-mappers";
 import type { ChatMessageRow } from "@/lib/supabase-types";
 import {
@@ -81,7 +81,7 @@ export async function insertChatMessage(
     return {
       data: null,
       error:
-        "Live chat is closed. It opens 15 minutes before kickoff and closes 2 hours after kickoff.",
+        describeChatWindow().apiError,
     };
   }
 

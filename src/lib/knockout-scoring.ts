@@ -1,3 +1,5 @@
+import { toEnglishTeam } from "@/lib/team-names";
+
 export type KnockoutPickData = {
   sf1Home: string | null;
   sf1Away: string | null;
@@ -17,24 +19,32 @@ export const KNOCKOUT_POINTS = {
   bronzeTeam: 2,
 } as const;
 
+function norm(t: string): string {
+  return toEnglishTeam(t);
+}
+
 function teamsInSemis(answer: KnockoutPickData): string[] {
-  return [answer.sf1Home, answer.sf1Away, answer.sf2Home, answer.sf2Away].filter(
-    (t): t is string => !!t,
-  );
+  return [answer.sf1Home, answer.sf1Away, answer.sf2Home, answer.sf2Away]
+    .filter((t): t is string => !!t)
+    .map(norm);
 }
 
 function teamsInFinal(answer: KnockoutPickData): string[] {
-  return [answer.finalHome, answer.finalAway].filter((t): t is string => !!t);
+  return [answer.finalHome, answer.finalAway]
+    .filter((t): t is string => !!t)
+    .map(norm);
 }
 
 function teamsInBronze(answer: KnockoutPickData): string[] {
-  return [answer.bronzeHome, answer.bronzeAway].filter((t): t is string => !!t);
+  return [answer.bronzeHome, answer.bronzeAway]
+    .filter((t): t is string => !!t)
+    .map(norm);
 }
 
 function pickedSemifinalists(pick: KnockoutPickData): string[] {
-  return [pick.sf1Home, pick.sf1Away, pick.sf2Home, pick.sf2Away].filter(
-    (t): t is string => !!t,
-  );
+  return [pick.sf1Home, pick.sf1Away, pick.sf2Home, pick.sf2Away]
+    .filter((t): t is string => !!t)
+    .map(norm);
 }
 
 export function scoreKnockoutPick(
@@ -50,16 +60,24 @@ export function scoreKnockoutPick(
   }
 
   const actualFinal = new Set(teamsInFinal(answer));
-  for (const t of [pick.finalHome, pick.finalAway].filter((x): x is string => !!x)) {
+  for (const t of [pick.finalHome, pick.finalAway]
+    .filter((x): x is string => !!x)
+    .map(norm)) {
     if (actualFinal.has(t)) points += KNOCKOUT_POINTS.finalist;
   }
 
-  if (pick.champion && pick.champion === answer.champion) {
+  if (
+    pick.champion &&
+    answer.champion &&
+    norm(pick.champion) === norm(answer.champion)
+  ) {
     points += KNOCKOUT_POINTS.champion;
   }
 
   const actualBronze = new Set(teamsInBronze(answer));
-  for (const t of [pick.bronzeHome, pick.bronzeAway].filter((x): x is string => !!x)) {
+  for (const t of [pick.bronzeHome, pick.bronzeAway]
+    .filter((x): x is string => !!x)
+    .map(norm)) {
     if (actualBronze.has(t)) points += KNOCKOUT_POINTS.bronzeTeam;
   }
 

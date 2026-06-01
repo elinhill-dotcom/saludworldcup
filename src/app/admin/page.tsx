@@ -166,7 +166,7 @@ export default function AdminPage() {
     return (
       <div className="space-y-6">
         <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 max-w-sm">
-          <h2 className="font-semibold mb-3">Admin</h2>
+          <h2 className="font-semibold mb-3">Contact Elin</h2>
           <form onSubmit={handleLogin} className="space-y-3">
             <label className="block text-sm text-[var(--muted)]">
               Password
@@ -199,7 +199,7 @@ export default function AdminPage() {
     <div className="space-y-6">
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Admin</h2>
+          <h2 className="font-semibold">Elin</h2>
           <button
             type="button"
             onClick={handleLogout}

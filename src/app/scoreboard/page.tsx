@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PlayerStatsModal } from "@/components/PlayerStatsModal";
+import { PrizeSplit } from "@/components/PrizeSplit";
 import { SupporterWall } from "@/components/SupporterWall";
 import type { PlayerPoolStats } from "@/lib/pool-stats";
 
@@ -144,9 +145,13 @@ export default function ScoreboardPage() {
             </div>
           )}
 
-          <p className="text-xs text-[var(--muted)] mt-3">
-            Tie-break: most exact group scores. Split the jar as you agree (e.g.
-            60% / 30% / 10% for top 3).
+          <div className="mt-3">
+            <PrizeSplit
+              jarEur={jarContributionEur}
+              showEntry={false}
+              showTieBreak
+              className="text-xs text-[var(--muted)]"
+            />
             {canViewPlayerStats && playerStats.size > 0 && (
               <span className="block mt-1">
                 Tap a name for player stats.
@@ -158,7 +163,7 @@ export default function ScoreboardPage() {
                 20:00.
               </span>
             )}
-          </p>
+          </div>
         </section>
       </div>
 

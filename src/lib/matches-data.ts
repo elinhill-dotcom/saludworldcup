@@ -19,10 +19,15 @@ const DAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday
 const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] as const;
 
 /** Build an English day label like "Thursday 11 June" from a YYYY-MM-DD date string. */
-function enDayLabel(dateStr: string): string {
+export function enDayLabel(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(y, m - 1, d);
   return `${DAYS_EN[dt.getDay()]} ${d} ${MONTHS_EN[dt.getMonth()]}`;
+}
+
+/** English day label from a kickoff ISO timestamp (always CEST calendar date). */
+export function dayLabelFromKickoff(kickoffIso: string): string {
+  return enDayLabel(kickoffIso.slice(0, 10));
 }
 
 /** Full schedule (CEST kickoff times, UTC+2). Group stage = score predictions. */

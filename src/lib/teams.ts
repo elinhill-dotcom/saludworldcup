@@ -1,3 +1,5 @@
+import { toEnglishTeam } from "./team-names";
+
 /** All nations in the 2026 group stage (English names). */
 export const ALL_TEAMS = [
   "Mexico",
@@ -62,5 +64,7 @@ export function isFeaturedTeam(name: string): boolean {
 }
 
 export function isFeaturedMatch(home: string, away: string): boolean {
-  return isFeaturedTeam(home) || isFeaturedTeam(away);
+  return (
+    isFeaturedTeam(toEnglishTeam(home)) || isFeaturedTeam(toEnglishTeam(away))
+  );
 }

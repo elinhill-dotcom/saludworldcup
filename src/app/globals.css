@@ -79,27 +79,28 @@ body::before {
   border-bottom: 3px solid rgba(255, 255, 255, 0.12);
 }
 
-.site-header__admin {
+.site-header__elin {
   position: absolute;
   top: 0.65rem;
   right: 0.65rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  padding: 0.35rem 0.65rem;
   border-radius: 0.5rem;
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
   background: rgba(0, 0, 0, 0.15);
   transition: background 0.15s, color 0.15s;
 }
 
-.site-header__admin:hover {
+.site-header__elin:hover {
   color: #fff;
   background: rgba(0, 0, 0, 0.28);
 }
 
-.site-header__admin--active {
+.site-header__elin--active {
   color: #fff;
   background: rgba(255, 255, 255, 0.22);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
@@ -108,7 +109,8 @@ body::before {
 .site-header__logo {
   height: auto;
   width: auto;
-  max-width: min(240px, 85vw);
+  max-width: min(280px, 90vw);
+  max-height: 72px;
   object-fit: contain;
 }
 

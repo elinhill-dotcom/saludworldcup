@@ -13,7 +13,7 @@ import {
   adminFetchHeaders,
   getAdminPassword,
 } from "@/lib/admin-session";
-import { isMatchLive } from "@/lib/match-live";
+import { describeChatWindow, isMatchLive } from "@/lib/match-live";
 import {
   sendChatMessage,
   subscribeToMatchChatRoom,
@@ -304,13 +304,13 @@ export function LiveChatRoom({ matchId }: Props) {
         </div>
         {!live && (
           <p className="text-sm text-[var(--danger)] mt-3">
-            Chat is closed (opens 15 min before, closes 2 h after kickoff). You
-            can read old messages but cannot post new ones.
+            {describeChatWindow().closedNotice} You can read old messages but
+            cannot post new ones.
           </p>
         )}
         {adminTestMode && (
           <p className="text-sm text-amber-300/90 mt-3">
-            Admin test mode — chat is open for you only; colleagues still see
+            Elin test mode — chat is open for you only; colleagues still see
             the normal schedule.
           </p>
         )}

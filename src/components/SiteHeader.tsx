@@ -24,23 +24,6 @@ function FootballIcon({ className }: { className?: string }) {
   );
 }
 
-function AdminIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-    </svg>
-  );
-}
-
 export function SiteHeader() {
   const pathname = usePathname();
   const adminActive = pathname.startsWith("/admin");
@@ -50,19 +33,19 @@ export function SiteHeader() {
       <div className="site-header__brand">
         <Image
           src="/salud-logo.png"
-          alt="Salud Foodgroup Europe"
-          width={220}
-          height={72}
+          alt="Salud foodgroup europe"
+          width={260}
+          height={80}
           className="site-header__logo"
           priority
         />
         <Link
           href="/admin"
-          className={`site-header__admin ${adminActive ? "site-header__admin--active" : ""}`}
-          title="Admin"
-          aria-label="Admin"
+          className={`site-header__elin ${adminActive ? "site-header__elin--active" : ""}`}
+          title="Contact Elin"
+          aria-label="Contact Elin"
         >
-          <AdminIcon />
+          Elin
         </Link>
       </div>
 
@@ -74,7 +57,7 @@ export function SiteHeader() {
         </div>
         <p className="site-header__tagline">
           <span className="site-header__pitch-mark" aria-hidden />
-          Office pool · €10 in the jar · CEST
+          Office pool · €10 jar · 60/30/10 split · CEST
         </p>
       </div>
     </header>
