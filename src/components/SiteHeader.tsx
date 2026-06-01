@@ -34,18 +34,18 @@ export function SiteHeader() {
         <Image
           src="/salud-logo.png"
           alt="Salud foodgroup europe"
-          width={260}
-          height={80}
+          width={890}
+          height={377}
           className="site-header__logo"
           priority
         />
         <Link
           href="/admin"
           className={`site-header__elin ${adminActive ? "site-header__elin--active" : ""}`}
-          title="Contact Elin"
-          aria-label="Contact Elin"
+          title="Admin"
+          aria-label="Admin"
         >
-          Elin
+          Admin
         </Link>
       </div>
 

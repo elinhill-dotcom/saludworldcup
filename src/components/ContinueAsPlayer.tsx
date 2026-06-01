@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { joinOrResumeByName, lookupPlayerName } from "@/lib/join-player";
 import { MIN_PASSWORD_LENGTH } from "@/lib/player-password";
 import type { StoredPlayer } from "@/lib/player-storage";
@@ -97,11 +96,8 @@ export function ContinueAsPlayer({
           name and password below.
         </li>
         <li>
-          Forgot password?{" "}
-          <Link href="/admin" className="text-[var(--accent)] hover:underline">
-            Contact Elin
-          </Link>
-          .
+          <strong className="text-white">Forgot your password?</strong> Contact{" "}
+          <strong className="text-white">Elin</strong> — she can reset it for you.
         </li>
       </ul>
       <form onSubmit={submit} className="space-y-3">
