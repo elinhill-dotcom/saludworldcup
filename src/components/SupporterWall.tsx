@@ -52,8 +52,8 @@ export function SupporterWall() {
   }
 
   return (
-    <aside className="supporter-wall flex flex-col h-full min-h-[320px]">
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 mb-4">
+    <aside className="supporter-wall space-y-4 lg:flex lg:flex-col lg:min-h-0">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <span aria-hidden>📣</span>
           Supporter Wall
@@ -65,7 +65,7 @@ export function SupporterWall() {
 
       <form
         onSubmit={submit}
-        className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 space-y-3 mb-4 shrink-0"
+        className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 space-y-3"
       >
         <label className="block text-sm">
           <span className="text-[var(--muted)]">Your name</span>
@@ -105,11 +105,11 @@ export function SupporterWall() {
         </button>
       </form>
 
-      <div className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden flex flex-col min-h-0">
-        <p className="text-xs text-[var(--muted)] px-4 py-2 border-b border-[var(--border)] shrink-0">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] lg:flex lg:flex-col lg:min-h-0 lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden">
+        <p className="text-xs text-[var(--muted)] px-4 py-2 border-b border-[var(--border)]">
           {comments.length} message{comments.length === 1 ? "" : "s"}
         </p>
-        <ul className="overflow-y-auto flex-1 p-3 space-y-3 max-h-[420px] lg:max-h-none">
+        <ul className="p-3 space-y-3 lg:overflow-y-auto lg:flex-1">
           {comments.length === 0 ? (
             <li className="text-sm text-[var(--muted)] text-center py-8">
               Be the first to post!
@@ -118,13 +118,13 @@ export function SupporterWall() {
             comments.map((c) => (
               <li
                 key={c.id}
-                className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 p-3"
+                className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 p-3 sm:p-4"
               >
-                <div className="flex items-baseline justify-between gap-2 mb-1">
+                <div className="flex items-baseline justify-between gap-2 mb-1.5">
                   <span className="font-semibold text-[var(--accent)]">
                     {c.name}
                   </span>
-                  <time className="text-[10px] text-[var(--muted)] shrink-0">
+                  <time className="text-[10px] sm:text-xs text-[var(--muted)] shrink-0">
                     {new Date(c.createdAt).toLocaleString("en-GB", {
                       day: "numeric",
                       month: "short",
@@ -133,7 +133,7 @@ export function SupporterWall() {
                     })}
                   </time>
                 </div>
-                <p className="text-sm whitespace-pre-wrap break-words">
+                <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words">
                   {c.message}
                 </p>
               </li>
