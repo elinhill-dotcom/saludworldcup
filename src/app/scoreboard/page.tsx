@@ -15,6 +15,7 @@ type Entry = {
   exactHits: number;
   outcomeHits: number;
   groupPicksCount: number;
+  picksReady: boolean;
 };
 
 export default function ScoreboardPage() {
@@ -67,6 +68,7 @@ export default function ScoreboardPage() {
   }, []);
 
   const canViewPlayerStats = picksLocked;
+  const showPickStatus = !picksLocked;
 
   return (
     <div className="scoreboard-page">
@@ -90,6 +92,9 @@ export default function ScoreboardPage() {
                   <tr>
                     <th className="px-4 py-3">#</th>
                     <th className="px-4 py-3">Name</th>
+                    {showPickStatus && (
+                      <th className="px-4 py-3">Status</th>
+                    )}
                     <th className="px-4 py-3 text-right">Total</th>
                     <th className="px-4 py-3 text-right hidden sm:table-cell">
                       Group
@@ -126,6 +131,19 @@ export default function ScoreboardPage() {
                           e.name
                         )}
                       </td>
+                      {showPickStatus && (
+                        <td className="px-4 py-3">
+                          {e.picksReady ? (
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                              Ready
+                            </span>
+                          ) : (
+                            <span className="font-medium text-red-600 dark:text-red-400">
+                              Still betting
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-right text-[var(--accent)] font-bold">
                         {e.points}
                       </td>

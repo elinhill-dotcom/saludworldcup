@@ -1,4 +1,5 @@
-import { JAR_CONTRIBUTION_EUR } from "@/lib/matches-data";
+import { JAR_CONTRIBUTION_EUR, GROUP_MATCH_IDS } from "@/lib/matches-data";
+import { countKnockoutFilled, KNOCKOUT_PICK_COUNT } from "@/lib/knockout-picks";
 import { scoreKnockoutPick } from "@/lib/knockout-scoring";
 import { pointsForPrediction } from "@/lib/scoring";
 import {
@@ -25,6 +26,7 @@ export type LeaderboardEntry = {
   exactHits: number;
   outcomeHits: number;
   groupPicksCount: number;
+  picksReady: boolean;
 };
 
 function client(browser: boolean) {
@@ -73,6 +75,8 @@ export async function computeLeaderboard(
     const answer =
       mappedAnswer?.set && mappedAnswer.champion ? mappedAnswer : null;
 
+    const groupMatchIds = new Set(GROUP_MATCH_IDS);
+
     const entries: LeaderboardEntry[] = (playersRes.data as PlayerRow[]).map(
       (row) => {
         let groupPoints = 0;
@@ -83,6 +87,7 @@ export async function computeLeaderboard(
         for (const pred of predsByPlayer.get(row.id) ?? []) {
           const m = matchMap.get(pred.matchId);
           if (!m || m.stage !== "group") continue;
+          if (!groupMatchIds.has(pred.matchId)) continue;
           groupPicksCount += 1;
           if (!m.finished || m.homeScore === null || m.awayScore === null) {
             continue;
@@ -100,9 +105,14 @@ export async function computeLeaderboard(
 
         let knockoutPoints = 0;
         const ko = koByPlayer.get(row.id);
+        const knockoutFilled = ko ? countKnockoutFilled(ko) : 0;
         if (answer && ko) {
           knockoutPoints = scoreKnockoutPick(ko, answer);
         }
+
+        const picksReady =
+          groupPicksCount >= GROUP_MATCH_IDS.length &&
+          knockoutFilled >= KNOCKOUT_PICK_COUNT;
 
         return {
           playerId: row.id,
@@ -113,6 +123,7 @@ export async function computeLeaderboard(
           exactHits,
           outcomeHits,
           groupPicksCount,
+          picksReady,
         };
       },
     );
