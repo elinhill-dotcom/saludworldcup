@@ -61,6 +61,11 @@ export default function HomePage() {
 
   const kp = config?.knockoutPoints;
 
+  function handleLogOut() {
+    signOut();
+    setProgress(null);
+  }
+
   return (
     <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--card)] p-6 space-y-6">
       <div>
@@ -205,9 +210,18 @@ export default function HomePage() {
       <div className="border-t border-[var(--border)] pt-6">
         {player ? (
           <div className="space-y-4">
-            <p className="text-lg">
-              Welcome back, <strong>{player.name}</strong>
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className="text-lg">
+                Welcome back, <strong>{player.name}</strong>
+              </p>
+              <button
+                type="button"
+                onClick={handleLogOut}
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:text-white hover:border-[var(--accent)]/50 shrink-0"
+              >
+                Log out
+              </button>
+            </div>
             {progress && (
               <p className="text-sm text-[var(--muted)]">
                 Saved progress:{" "}
@@ -221,6 +235,11 @@ export default function HomePage() {
                 knockout fields
               </p>
             )}
+            <p className="text-xs text-[var(--muted)]">
+              Wrong account or need to enter your password again?{" "}
+              <strong className="text-white">Log out</strong> and sign in below
+              with your name and password.
+            </p>
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/picks"
@@ -242,13 +261,6 @@ export default function HomePage() {
                   How has Salud bet?
                 </Link>
               )}
-              <button
-                type="button"
-                onClick={signOut}
-                className="rounded-lg px-5 py-2 text-[var(--muted)] hover:text-white"
-              >
-                Use a different name
-              </button>
             </div>
           </div>
         ) : (

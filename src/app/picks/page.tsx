@@ -282,7 +282,7 @@ export default function PicksPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28">
       <PicksChecklist
         groupFilled={filledGroup}
         groupTotal={matches.length}
@@ -292,23 +292,9 @@ export default function PicksPage() {
         locked={locked}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">My picks — {player.name}</h2>
-        </div>
-        {!locked && (
-          <button
-            type="button"
-            onClick={save}
-            disabled={saving}
-            className="rounded-lg bg-[var(--accent)] px-5 py-2 font-semibold text-[var(--accent-foreground)] disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save all picks"}
-          </button>
-        )}
-      </div>
+      <h2 className="text-xl font-semibold">My picks — {player.name}</h2>
 
-      {message && (
+      {message && locked && (
         <p
           className={`rounded-lg px-4 py-2 text-sm ${
             messageWarn
@@ -479,14 +465,34 @@ export default function PicksPage() {
       )}
 
       {!locked && matches.length > 0 && (
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="w-full rounded-lg bg-[var(--accent)] px-5 py-3 font-semibold text-[var(--accent-foreground)] disabled:opacity-50"
+        <div
+          className="picks-save-bar fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--card)]/95 backdrop-blur-md shadow-[0_-8px_24px_rgba(0,0,0,0.35)]"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
-          {saving ? "Saving..." : "Save all picks"}
-        </button>
+          <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
+            <p className="hidden min-w-0 flex-1 text-xs text-[var(--muted)] sm:block">
+              Group {filledGroup}/{matches.length} · Knockout {knockoutFilled}/
+              {KNOCKOUT_PICK_COUNT}
+            </p>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="w-full sm:w-auto shrink-0 rounded-lg bg-[var(--accent)] px-6 py-3 font-semibold text-[var(--accent-foreground)] disabled:opacity-50 sm:min-w-[10rem]"
+            >
+              {saving ? "Saving…" : "Save all picks"}
+            </button>
+          </div>
+          {message && (
+            <p
+              className={`mx-auto max-w-3xl px-4 pb-2 text-center text-xs ${
+                messageWarn ? "text-[var(--danger)]" : "text-[var(--success)]"
+              }`}
+            >
+              {message}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
