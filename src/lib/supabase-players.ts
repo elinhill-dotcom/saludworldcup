@@ -1,11 +1,12 @@
 import { GROUP_MATCH_IDS } from "@/lib/matches-data";
+import { countKnockoutFilled } from "@/lib/knockout-picks";
+import { mapKnockoutPick, mapPlayer } from "@/lib/supabase-mappers";
+import type { KnockoutPickRow, PlayerRow } from "@/lib/supabase-types";
 import {
   hashPassword,
   validatePassword,
   verifyPassword,
 } from "@/lib/player-password";
-import { mapPlayer } from "@/lib/supabase-mappers";
-import type { PlayerRow } from "@/lib/supabase-types";
 import {
   getSupabaseBrowser,
   getSupabaseServer,
@@ -213,7 +214,8 @@ export async function fetchAdminPlayers(): Promise<
       name: string;
       createdAt: string;
       groupPicksCount: number;
-      hasKnockoutPick: boolean;
+      knockoutFilled: number;
+      knockoutTotal: number;
       hasPassword: boolean;
     }[]
   >
@@ -223,7 +225,7 @@ export async function fetchAdminPlayers(): Promise<
     const [playersRes, predsRes, koRes] = await Promise.all([
       supabase.from("players").select("*").order("created_at", { ascending: false }),
       supabase.from("predictions").select("player_id, match_id"),
-      supabase.from("knockout_picks").select("player_id"),
+      supabase.from("knockout_picks").select("*"),
     ]);
 
     if (playersRes.error) return { data: null, error: playersRes.error.message };
@@ -236,14 +238,21 @@ export async function fetchAdminPlayers(): Promise<
       if (!groupIds.has(p.match_id)) continue;
       groupCount.set(p.player_id, (groupCount.get(p.player_id) ?? 0) + 1);
     }
-    const hasKo = new Set((koRes.data ?? []).map((k) => k.player_id));
+    const knockoutFilled = new Map<string, number>();
+    for (const koRow of koRes.data as KnockoutPickRow[]) {
+      knockoutFilled.set(
+        koRow.player_id,
+        countKnockoutFilled(mapKnockoutPick(koRow)),
+      );
+    }
 
     const players = (playersRes.data as PlayerRow[]).map((row) => ({
       id: row.id,
       name: row.name,
       createdAt: row.created_at,
       groupPicksCount: groupCount.get(row.id) ?? 0,
-      hasKnockoutPick: hasKo.has(row.id),
+      knockoutFilled: knockoutFilled.get(row.id) ?? 0,
+      knockoutTotal: 9,
       hasPassword: !!row.password_hash,
     }));
 

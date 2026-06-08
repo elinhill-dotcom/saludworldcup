@@ -8,13 +8,15 @@ import {
   saveKnockoutPick,
 } from "@/lib/supabase-predictions";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { toEnglishTeam } from "@/lib/team-names";
 import { ALL_TEAMS } from "@/lib/teams";
 
 const validTeams = new Set<string>(ALL_TEAMS);
 
 function sanitizeTeam(v: unknown): string {
   if (typeof v !== "string" || !v) return "";
-  return validTeams.has(v) ? v : "";
+  const en = toEnglishTeam(v.trim());
+  return validTeams.has(en) ? en : "";
 }
 
 export async function GET(req: NextRequest) {

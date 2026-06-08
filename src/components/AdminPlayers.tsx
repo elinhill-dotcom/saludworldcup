@@ -7,7 +7,8 @@ type AdminPlayer = {
   name: string;
   createdAt: string;
   groupPicksCount: number;
-  hasKnockoutPick: boolean;
+  knockoutFilled: number;
+  knockoutTotal: number;
   hasPassword: boolean;
 };
 
@@ -190,8 +191,13 @@ export function AdminPlayers({ password, onMessage }: Props) {
               <p className="text-xs text-[var(--muted)] mb-3">
                 ID {p.id.slice(0, 8)}… · Joined{" "}
                 {new Date(p.createdAt).toLocaleString("en-GB")} · Group picks{" "}
-                {p.groupPicksCount}/72
-                {p.hasKnockoutPick ? " · Knockout filled" : " · No knockout picks"}
+                {p.groupPicksCount}/72 · Knockout {p.knockoutFilled}/
+                {p.knockoutTotal}
+                {p.knockoutFilled === p.knockoutTotal
+                  ? " ✓"
+                  : p.knockoutFilled > 0
+                    ? " (incomplete)"
+                    : ""}
                 {p.hasPassword ? " · Password set" : " · No password yet"}
               </p>
               <div className="flex flex-wrap gap-2">

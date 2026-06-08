@@ -1,4 +1,8 @@
-import type { KnockoutFormState } from "@/lib/knockout-picks";
+import {
+  countKnockoutFilled,
+  emptyKnockoutForm,
+  type KnockoutFormState,
+} from "@/lib/knockout-picks";
 import { GROUP_MATCH_IDS } from "@/lib/matches-data";
 import {
   knockoutPickToRow,
@@ -139,6 +143,15 @@ export async function saveKnockoutPick(
   try {
     const supabase = client(browser);
     const row = knockoutPickToRow(playerId, form);
+    if (countKnockoutFilled(form) === 0) {
+      const { error } = await supabase
+        .from("knockout_picks")
+        .delete()
+        .eq("player_id", playerId);
+      if (error) return { data: null, error: error.message };
+      return { data: emptyKnockoutForm(), error: null };
+    }
+
     const { data, error } = await supabase
       .from("knockout_picks")
       .upsert(row, { onConflict: "player_id" })
