@@ -23,7 +23,7 @@ import { playerAuthHeaders } from "@/lib/player-session-storage";
 type PredMap = Record<number, { home: string; away: string }>;
 
 export default function PicksPage() {
-  const { player, hydrated, remember } = usePlayerSession();
+  const { player, hydrated, remember, signOut } = usePlayerSession();
   const [matches, setMatches] = useState<MatchView[]>([]);
   const [preds, setPreds] = useState<PredMap>({});
   const [knockout, setKnockout] = useState<KnockoutFormState>(
@@ -36,6 +36,7 @@ export default function PicksPage() {
   const [message, setMessage] = useState("");
   const [messageWarn, setMessageWarn] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [loginHint, setLoginHint] = useState("");
   const wasLockedRef = useRef(false);
   const [poolByMatch, setPoolByMatch] = useState<Map<number, MatchPoolStats>>(
     new Map(),
@@ -61,6 +62,22 @@ export default function PicksPage() {
           "Could not load matches. Check Supabase settings and run npm run db:seed.",
       );
       setMatches([]);
+      return;
+    }
+
+    if (pRes.status === 403 || kRes.status === 403) {
+      setLoginHint(
+        "Your saved picks are on the server, but this browser needs you to log in again with your password.",
+      );
+      signOut();
+      return;
+    }
+
+    if (!pRes.ok || !kRes.ok) {
+      setLoadError(
+        pData.error ?? kData.error ?? "Could not load your saved picks.",
+      );
+      setMatches(mData.matches ?? []);
       return;
     }
 
@@ -113,7 +130,7 @@ export default function PicksPage() {
         champion: pick.champion ?? "",
       });
     }
-  }, []);
+  }, [signOut]);
 
   useEffect(() => {
     if (player) load(player.id);
@@ -246,13 +263,21 @@ export default function PicksPage() {
 
   if (!player) {
     return (
-      <ContinueAsPlayer
-        title="My picks"
-        onContinue={(p: StoredPlayer) => {
-          remember(p);
-          load(p.id);
-        }}
-      />
+      <div className="space-y-4">
+        {loginHint && (
+          <p className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-sm text-[var(--muted)]">
+            {loginHint}
+          </p>
+        )}
+        <ContinueAsPlayer
+          title="My picks"
+          onContinue={(p: StoredPlayer) => {
+            setLoginHint("");
+            remember(p);
+            load(p.id);
+          }}
+        />
+      </div>
     );
   }
 

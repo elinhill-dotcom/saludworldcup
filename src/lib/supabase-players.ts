@@ -38,7 +38,7 @@ export async function lookupPlayerByName(
     const { data, error } = await supabase
       .from("players")
       .select("password_hash")
-      .eq("name", name.trim())
+      .ilike("name", name.trim())
       .maybeSingle();
 
     if (error) return { data: null, error: error.message };
@@ -71,7 +71,7 @@ export async function authenticatePlayer(
     const { data: existing, error: findErr } = await supabase
       .from("players")
       .select("*")
-      .eq("name", trimmed)
+      .ilike("name", trimmed)
       .maybeSingle();
 
     if (findErr) return { data: null, error: findErr.message, status: 500 };
@@ -128,6 +128,42 @@ export async function clearPlayerPassword(
 
     if (error) return { data: null, error: error.message };
     return { data: true, error: null };
+  } catch (e) {
+    return { data: null, error: toErrorMessage(e) };
+  }
+}
+
+export async function verifyStoredPlayerSession(
+  playerId: string,
+  password: string,
+): Promise<
+  DbResult<{ valid: true; player: ReturnType<typeof mapPlayer> } | { valid: false }>
+> {
+  const passwordErr = validatePassword(password);
+  if (passwordErr) {
+    return { data: { valid: false }, error: null };
+  }
+
+  const playerRes = await findPlayerById(playerId);
+  if (playerRes.error) return { data: null, error: playerRes.error };
+  if (!playerRes.data) return { data: { valid: false }, error: null };
+
+  try {
+    const supabase = getSupabaseServer();
+    const { data, error } = await supabase
+      .from("players")
+      .select("password_hash")
+      .eq("id", playerId)
+      .maybeSingle();
+
+    if (error) return { data: null, error: error.message };
+    if (!data?.password_hash) return { data: { valid: false }, error: null };
+
+    if (!verifyPassword(password, data.password_hash)) {
+      return { data: { valid: false }, error: null };
+    }
+
+    return { data: { valid: true, player: playerRes.data }, error: null };
   } catch (e) {
     return { data: null, error: toErrorMessage(e) };
   }

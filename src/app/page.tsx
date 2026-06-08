@@ -49,7 +49,11 @@ export default function HomePage() {
     fetch(`/api/players/progress?playerId=${player.id}`, {
       headers: playerAuthHeaders(),
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) return null;
+        return data;
+      })
       .then(setProgress);
   }, [player]);
 

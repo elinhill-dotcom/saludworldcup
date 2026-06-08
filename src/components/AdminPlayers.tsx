@@ -188,8 +188,9 @@ export function AdminPlayers({ password, onMessage }: Props) {
                 </button>
               </div>
               <p className="text-xs text-[var(--muted)] mb-3">
-                Joined {new Date(p.createdAt).toLocaleString("en-GB")} · Group
-                picks {p.groupPicksCount}/72
+                ID {p.id.slice(0, 8)}… · Joined{" "}
+                {new Date(p.createdAt).toLocaleString("en-GB")} · Group picks{" "}
+                {p.groupPicksCount}/72
                 {p.hasKnockoutPick ? " · Knockout filled" : " · No knockout picks"}
                 {p.hasPassword ? " · Password set" : " · No password yet"}
               </p>
