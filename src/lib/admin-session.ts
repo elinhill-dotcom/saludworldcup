@@ -29,16 +29,36 @@ export function adminFetchHeaders(): HeadersInit {
   return pw ? { "x-admin-password": pw } : {};
 }
 
-export async function verifyAndLogin(password: string): Promise<{ ok: boolean; error?: string }> {
+async function checkAdminPassword(password: string): Promise<boolean> {
   try {
     const res = await fetch("/api/admin/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      return { ok: false, error: data.error ?? "Wrong password" };
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Re-check stored admin password with the server (player login must not grant admin). */
+export async function revalidateAdminSession(): Promise<boolean> {
+  const pw = getAdminPassword();
+  if (!pw || sessionStorage.getItem(VERIFIED_KEY) !== "1") {
+    clearAdminSession();
+    return false;
+  }
+  const ok = await checkAdminPassword(pw);
+  if (!ok) clearAdminSession();
+  return ok;
+}
+
+export async function verifyAndLogin(password: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const ok = await checkAdminPassword(password);
+    if (!ok) {
+      return { ok: false, error: "Wrong admin password" };
     }
     setAdminSession(password);
     return { ok: true };

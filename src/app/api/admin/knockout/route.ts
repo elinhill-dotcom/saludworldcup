@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth";
 import { verifyAdminPassword } from "@/lib/config";
 import type { KnockoutFormState } from "@/lib/knockout-picks";
 import {
@@ -15,7 +16,10 @@ function sanitizeTeam(v: unknown): string {
   return validTeams.has(v) ? v : "";
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = requireAdmin(req);
+  if (auth) return auth;
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
       { error: "Supabase is not configured." },

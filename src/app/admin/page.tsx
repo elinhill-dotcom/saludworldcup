@@ -12,7 +12,7 @@ import type { MatchView } from "@/components/MatchCard";
 import {
   clearAdminSession,
   getAdminPassword,
-  isAdminLoggedIn,
+  revalidateAdminSession,
   verifyAndLogin,
 } from "@/lib/admin-session";
 import Link from "next/link";
@@ -20,6 +20,7 @@ import Link from "next/link";
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [loginError, setLoginError] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
   const [pwInput, setPwInput] = useState("");
@@ -39,10 +40,21 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (isAdminLoggedIn()) {
-      setPassword(getAdminPassword()!);
-      setLoggedIn(true);
-    }
+    let cancelled = false;
+    revalidateAdminSession().then((ok) => {
+      if (cancelled) return;
+      if (ok) {
+        setPassword(getAdminPassword()!);
+        setLoggedIn(true);
+      } else {
+        setLoggedIn(false);
+        setPassword("");
+      }
+      setCheckingSession(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -50,7 +62,9 @@ export default function AdminPage() {
     fetch("/api/matches?stage=group")
       .then((r) => r.json())
       .then((d) => setMatches(d.matches ?? []));
-    fetch("/api/admin/knockout")
+    fetch("/api/admin/knockout", {
+      headers: { "x-admin-password": password },
+    })
       .then((r) => r.json())
       .then((d) => {
         const a = d.answer;
@@ -162,11 +176,19 @@ export default function AdminPage() {
     showMessage("Knockout answers saved — scoreboard updated.");
   }
 
+  if (checkingSession) {
+    return <p className="text-sm text-[var(--muted)]">Checking admin access…</p>;
+  }
+
   if (!loggedIn) {
     return (
       <div className="space-y-6">
         <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 max-w-sm">
-          <h2 className="font-semibold mb-3">Contact Elin</h2>
+          <h2 className="font-semibold mb-3">Admin login</h2>
+          <p className="text-sm text-[var(--muted)] mb-3">
+            Pool player login does not grant access here — enter the admin
+            password separately.
+          </p>
           <form onSubmit={handleLogin} className="space-y-3">
             <label className="block text-sm text-[var(--muted)]">
               Password
@@ -199,7 +221,7 @@ export default function AdminPage() {
     <div className="space-y-6">
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Elin</h2>
+          <h2 className="font-semibold">Admin</h2>
           <button
             type="button"
             onClick={handleLogout}

@@ -1,3 +1,4 @@
+import { clearAdminSession } from "./admin-session";
 import { setStoredPlayer, type StoredPlayer } from "./player-storage";
 import { setPlayerSessionPassword } from "./player-session-storage";
 
@@ -16,6 +17,7 @@ export async function joinOrResumeByName(
     return { error: data.error ?? "Something went wrong" };
   }
   const player = data.player as StoredPlayer;
+  clearAdminSession();
   setStoredPlayer(player);
   setPlayerSessionPassword(password);
   return { player };
