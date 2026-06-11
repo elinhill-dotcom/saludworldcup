@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminPassword, requireAdmin } from "@/lib/admin-auth";
-import { verifyAdminPassword, predictionsLocked } from "@/lib/config";
+import { verifyAdminPassword, predictionsLockedByTime } from "@/lib/config";
 import { fetchMatchPoolStats } from "@/lib/match-pool-stats";
 import { isMatchLive } from "@/lib/match-live";
 import { fetchMatchById } from "@/lib/supabase-matches";
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
   const live = adminTestMode || isMatchLive(match.kickoffAt);
 
   let poolInsight = null;
-  if (predictionsLocked()) {
+  if (predictionsLockedByTime()) {
     const insightRes = await fetchMatchPoolStats(matchId);
     if (insightRes.data && insightRes.data.pickCount > 0) {
       poolInsight = insightRes.data;

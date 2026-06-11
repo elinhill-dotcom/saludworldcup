@@ -1,4 +1,5 @@
-import { JAR_CONTRIBUTION_EUR, GROUP_MATCH_IDS } from "@/lib/matches-data";
+import { JAR_CONTRIBUTION_EUR } from "@/lib/matches-data";
+import { fetchGroupMatchIds } from "@/lib/group-match-ids";
 import { countKnockoutFilled, KNOCKOUT_PICK_COUNT } from "@/lib/knockout-picks";
 import { scoreKnockoutPick } from "@/lib/knockout-scoring";
 import { pointsForPrediction } from "@/lib/scoring";
@@ -75,7 +76,10 @@ export async function computeLeaderboard(
     const answer =
       mappedAnswer?.set && mappedAnswer.champion ? mappedAnswer : null;
 
-    const groupMatchIds = new Set(GROUP_MATCH_IDS);
+    const groupRes = await fetchGroupMatchIds(supabase);
+    if (groupRes.error) return { data: null, error: groupRes.error };
+    const groupMatchIds = new Set(groupRes.ids);
+    const groupTotal = groupRes.ids.length;
 
     const entries: LeaderboardEntry[] = (playersRes.data as PlayerRow[]).map(
       (row) => {
@@ -111,7 +115,7 @@ export async function computeLeaderboard(
         }
 
         const picksReady =
-          groupPicksCount >= GROUP_MATCH_IDS.length &&
+          groupPicksCount >= groupTotal &&
           knockoutFilled >= KNOCKOUT_PICK_COUNT;
 
         return {

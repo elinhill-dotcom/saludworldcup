@@ -1,5 +1,6 @@
-import { predictionsLocked } from "@/lib/config";
+import { predictionsLockedByTime } from "@/lib/config";
 import { verifyPassword } from "@/lib/player-password";
+import { arePredictionsLocked } from "@/lib/predictions-lock";
 import type { PlayerRow } from "@/lib/supabase-types";
 import { getSupabaseServer, toErrorMessage, type DbResult } from "@/lib/supabase";
 
@@ -7,7 +8,10 @@ export async function canReadPlayerData(
   playerId: string,
   password: string | null,
 ): Promise<DbResult<boolean>> {
-  if (predictionsLocked()) {
+  const deadlinePassed = predictionsLockedByTime();
+  const picksLocked = await arePredictionsLocked();
+
+  if (deadlinePassed && picksLocked) {
     return { data: true, error: null };
   }
 
@@ -38,4 +42,15 @@ export async function canReadPlayerData(
   } catch (e) {
     return { data: null, error: toErrorMessage(e) };
   }
+}
+
+/** Same rules as read — must be logged in as that player to save before lock. */
+export async function canWritePlayerData(
+  playerId: string,
+  password: string | null,
+): Promise<DbResult<boolean>> {
+  if (await arePredictionsLocked()) {
+    return { data: false, error: null };
+  }
+  return canReadPlayerData(playerId, password);
 }

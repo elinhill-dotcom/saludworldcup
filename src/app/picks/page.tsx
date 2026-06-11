@@ -30,6 +30,7 @@ export default function PicksPage() {
     emptyKnockoutForm(),
   );
   const [locked, setLocked] = useState(false);
+  const [picksReopened, setPicksReopened] = useState(false);
   const [filter, setFilter] = useState<"all" | "featured" | "missing">("all");
   const [tab, setTab] = useState<"group" | "knockout">("group");
   const [saving, setSaving] = useState(false);
@@ -87,6 +88,7 @@ export default function PicksPage() {
 
     setMatches(ms ?? []);
     setLocked(cfg.locked);
+    setPicksReopened(cfg.picksReopened ?? false);
     wasLockedRef.current = cfg.locked ?? false;
 
     if (cfg.locked) {
@@ -163,6 +165,7 @@ export default function PicksPage() {
       }
       wasLockedRef.current = nowLocked;
       setLocked(nowLocked);
+      setPicksReopened(cfg.picksReopened ?? false);
     };
 
     refreshLock();
@@ -219,12 +222,18 @@ export default function PicksPage() {
     const [groupRes, koRes] = await Promise.all([
       fetch("/api/predictions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...playerAuthHeaders(),
+        },
         body: JSON.stringify({ playerId: player.id, predictions: items }),
       }),
       fetch("/api/knockout-picks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...playerAuthHeaders(),
+        },
         body: JSON.stringify({ playerId: player.id, ...knockout }),
       }),
     ]);
@@ -241,8 +250,30 @@ export default function PicksPage() {
       return;
     }
 
+    const savedCount = groupData.savedCount ?? 0;
+    const submittedCount = groupData.submittedCount ?? items.length;
+
+    if (items.length > 0 && savedCount === 0) {
+      setMessage(
+        "Save failed — nothing was stored on the server. Log in again and retry, or contact Elin.",
+      );
+      setMessageWarn(true);
+      return;
+    }
+
+    if (submittedCount > 0 && savedCount < submittedCount) {
+      setMessage(
+        `Only ${savedCount}/${submittedCount} scores were confirmed on the server. Try saving again.`,
+      );
+      setMessageWarn(true);
+      await load(player.id);
+      return;
+    }
+
+    await load(player.id);
+
     const parts: string[] = [
-      `Saved! Group: ${groupData.savedCount}/${matches.length} scores.`,
+      `Saved! Group: ${savedCount}/${matches.length} scores on server.`,
       `Knockout: ${knockoutFilled}/${KNOCKOUT_PICK_COUNT} picks.`,
     ];
     if (!knockoutDone) {
@@ -322,6 +353,13 @@ export default function PicksPage() {
         <p className="rounded-lg bg-[var(--danger)]/20 text-[var(--danger)] px-4 py-2 text-sm">
           Picks are locked — you cannot add or change any picks after 11 June at
           20:00. View only.
+        </p>
+      )}
+
+      {picksReopened && !locked && (
+        <p className="rounded-lg bg-[var(--success)]/20 text-[var(--success)] px-4 py-2 text-sm">
+          Picks are temporarily open again — fill in your tips and press{" "}
+          <strong>Save all picks</strong>.
         </p>
       )}
 

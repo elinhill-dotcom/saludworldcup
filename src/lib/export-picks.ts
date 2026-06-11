@@ -1,4 +1,4 @@
-import { GROUP_MATCH_IDS } from "@/lib/matches-data";
+import { fetchGroupMatchIds } from "@/lib/group-match-ids";
 import {
   mapKnockoutPick,
   mapMatch,
@@ -27,9 +27,12 @@ export async function fetchExportData(): Promise<
 > {
   try {
     const supabase = getSupabaseServer();
+    const groupRes = await fetchGroupMatchIds(supabase);
+    if (groupRes.error) return { data: null, error: groupRes.error };
+
     const [playersRes, predsRes, koRes, matchesRes] = await Promise.all([
       supabase.from("players").select("*").order("name", { ascending: true }),
-      supabase.from("predictions").select("*").in("match_id", [...GROUP_MATCH_IDS]),
+      supabase.from("predictions").select("*").in("match_id", groupRes.ids),
       supabase.from("knockout_picks").select("*"),
       supabase
         .from("matches")

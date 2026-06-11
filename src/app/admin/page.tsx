@@ -7,6 +7,7 @@ import {
   type KnockoutFormState,
 } from "@/components/KnockoutPickForm";
 import { AdminPlayers } from "@/components/AdminPlayers";
+import { AdminPicksLock } from "@/components/AdminPicksLock";
 import { AdminExport } from "@/components/AdminExport";
 import type { MatchView } from "@/components/MatchCard";
 import {
@@ -241,6 +242,8 @@ export default function AdminPage() {
           {message}
         </p>
       )}
+
+      <AdminPicksLock password={password} onMessage={showMessage} />
 
       <div className="flex flex-wrap gap-2">
         <button

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { predictionsLocked } from "@/lib/config";
-import { canReadPlayerData } from "@/lib/player-auth";
+import { arePredictionsLocked } from "@/lib/predictions-lock";
+import { canReadPlayerData, canWritePlayerData } from "@/lib/player-auth";
 import { findPlayerById } from "@/lib/supabase-players";
 import {
   loadGroupPredictions,
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (predictionsLocked()) {
+  if (await arePredictionsLocked()) {
     return NextResponse.json(
       { error: "Picks are locked — no bets after 11 June at 20:00." },
       { status: 403 },
@@ -64,6 +64,18 @@ export async function POST(req: NextRequest) {
 
   if (!playerId || !Array.isArray(items)) {
     return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  }
+
+  const password = req.headers.get("x-player-password");
+  const access = await canWritePlayerData(playerId, password);
+  if (access.error) {
+    return NextResponse.json({ error: access.error }, { status: 500 });
+  }
+  if (!access.data) {
+    return NextResponse.json(
+      { error: "Log in with your password to save picks." },
+      { status: 403 },
+    );
   }
 
   const playerRes = await findPlayerById(playerId);
@@ -82,5 +94,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, savedCount: saveRes.data.savedCount });
+  return NextResponse.json({
+    ok: true,
+    savedCount: saveRes.data.savedCount,
+    submittedCount: saveRes.data.submittedCount,
+    writtenCount: saveRes.data.writtenCount,
+  });
 }

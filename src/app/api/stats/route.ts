@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPredictionLockAt, predictionsLocked } from "@/lib/config";
+import { getPredictionLockAt, predictionsLockedByTime } from "@/lib/config";
 import { computePoolStats } from "@/lib/pool-stats";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -11,7 +11,7 @@ export async function GET() {
     );
   }
 
-  const locked = predictionsLocked();
+  const locked = predictionsLockedByTime();
 
   if (!locked) {
     return NextResponse.json({

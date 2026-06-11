@@ -85,6 +85,15 @@ create index if not exists idx_chat_match_created on match_chat_messages(match_i
 insert into knockout_answer (id, set) values (1, false)
 on conflict (id) do nothing;
 
+create table if not exists pool_settings (
+  id int primary key default 1,
+  picks_unlock_override boolean not null default false,
+  constraint pool_settings_singleton check (id = 1)
+);
+
+insert into pool_settings (id, picks_unlock_override) values (1, false)
+on conflict (id) do nothing;
+
 -- RLS (permissive — no user auth)
 alter table players enable row level security;
 alter table matches enable row level security;
@@ -94,11 +103,14 @@ alter table knockout_answer enable row level security;
 alter table wall_comments enable row level security;
 alter table match_chat_messages enable row level security;
 
+alter table pool_settings enable row level security;
+
 create policy "players_all" on players for all using (true) with check (true);
 create policy "matches_all" on matches for all using (true) with check (true);
 create policy "predictions_all" on predictions for all using (true) with check (true);
 create policy "knockout_picks_all" on knockout_picks for all using (true) with check (true);
 create policy "knockout_answer_all" on knockout_answer for all using (true) with check (true);
+create policy "pool_settings_all" on pool_settings for all using (true) with check (true);
 create policy "wall_comments_all" on wall_comments for all using (true) with check (true);
 create policy "chat_all" on match_chat_messages for all using (true) with check (true);
 

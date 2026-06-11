@@ -3,7 +3,7 @@ import {
   emptyKnockoutForm,
   type KnockoutFormState,
 } from "@/lib/knockout-picks";
-import { GROUP_MATCH_IDS } from "@/lib/matches-data";
+import { fetchGroupMatchIds } from "@/lib/group-match-ids";
 import {
   knockoutPickToRow,
   mapKnockoutAnswer,
@@ -19,10 +19,19 @@ import {
   type DbResult,
 } from "@/lib/supabase";
 
-const validGroupIds = new Set(GROUP_MATCH_IDS);
-
 function client(browser: boolean) {
   return browser ? getSupabaseBrowser() : getSupabaseServer();
+}
+
+function isValidScore(h: number, a: number): boolean {
+  return (
+    Number.isInteger(h) &&
+    Number.isInteger(a) &&
+    h >= 0 &&
+    a >= 0 &&
+    h <= 20 &&
+    a <= 20
+  );
 }
 
 export async function loadGroupPredictions(
@@ -31,11 +40,14 @@ export async function loadGroupPredictions(
 ): Promise<DbResult<ReturnType<typeof mapPrediction>[]>> {
   try {
     const supabase = client(browser);
+    const groupRes = await fetchGroupMatchIds(supabase);
+    if (groupRes.error) return { data: null, error: groupRes.error };
+
     const { data, error } = await supabase
       .from("predictions")
       .select("*")
       .eq("player_id", playerId)
-      .in("match_id", [...validGroupIds]);
+      .in("match_id", groupRes.ids);
 
     if (error) return { data: null, error: error.message };
     return {
@@ -51,29 +63,38 @@ export async function saveGroupPredictions(
   playerId: string,
   items: { matchId: number; homeScore: number; awayScore: number }[],
   browser = false,
-): Promise<DbResult<{ savedCount: number }>> {
+): Promise<
+  DbResult<{ savedCount: number; submittedCount: number; writtenCount: number }>
+> {
   try {
     const supabase = client(browser);
+    const groupRes = await fetchGroupMatchIds(supabase);
+    if (groupRes.error) return { data: null, error: groupRes.error };
+
+    const validGroupIds = new Set(groupRes.ids);
+    const submittedCount = items.filter(
+      (item) =>
+        validGroupIds.has(item.matchId) &&
+        isValidScore(item.homeScore, item.awayScore),
+    ).length;
+
     const rows = items
       .filter((item) => validGroupIds.has(item.matchId))
-      .filter((item) => {
-        const h = item.homeScore;
-        const a = item.awayScore;
-        return (
-          Number.isInteger(h) &&
-          Number.isInteger(a) &&
-          h >= 0 &&
-          a >= 0 &&
-          h <= 20 &&
-          a <= 20
-        );
-      })
+      .filter((item) => isValidScore(item.homeScore, item.awayScore))
       .map((item) => ({
         player_id: playerId,
         match_id: item.matchId,
         home_score: item.homeScore,
         away_score: item.awayScore,
       }));
+
+    if (items.length > 0 && rows.length === 0) {
+      return {
+        data: null,
+        error:
+          "Could not save any scores — the match schedule may be out of sync. Contact Elin.",
+      };
+    }
 
     if (rows.length > 0) {
       const { error } = await supabase
@@ -87,10 +108,27 @@ export async function saveGroupPredictions(
       .from("predictions")
       .select("*", { count: "exact", head: true })
       .eq("player_id", playerId)
-      .in("match_id", [...validGroupIds]);
+      .in("match_id", groupRes.ids);
 
     if (countErr) return { data: null, error: countErr.message };
-    return { data: { savedCount: count ?? 0 }, error: null };
+
+    const savedCount = count ?? 0;
+    if (submittedCount > 0 && savedCount === 0) {
+      return {
+        data: null,
+        error:
+          "Save failed — nothing was stored on the server. Try again or contact Elin.",
+      };
+    }
+
+    return {
+      data: {
+        savedCount,
+        submittedCount,
+        writtenCount: rows.length,
+      },
+      error: null,
+    };
   } catch (e) {
     return { data: null, error: toErrorMessage(e) };
   }
@@ -99,12 +137,15 @@ export async function saveGroupPredictions(
 export async function clearPlayerPicks(playerId: string): Promise<DbResult<true>> {
   try {
     const supabase = getSupabaseServer();
+    const groupRes = await fetchGroupMatchIds(supabase);
+    if (groupRes.error) return { data: null, error: groupRes.error };
+
     const [p1, p2] = await Promise.all([
       supabase
         .from("predictions")
         .delete()
         .eq("player_id", playerId)
-        .in("match_id", [...validGroupIds]),
+        .in("match_id", groupRes.ids),
       supabase.from("knockout_picks").delete().eq("player_id", playerId),
     ]);
     if (p1.error) return { data: null, error: p1.error.message };

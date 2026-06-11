@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { predictionsLocked } from "@/lib/config";
+import { arePredictionsLocked } from "@/lib/predictions-lock";
+import { predictionsLockedByTime } from "@/lib/config";
 import { clearPlayerPicks } from "@/lib/supabase-predictions";
 import {
   clearPlayerPassword,
@@ -32,7 +33,8 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    locked: predictionsLocked(),
+    locked: await arePredictionsLocked(),
+    deadlinePassed: predictionsLockedByTime(),
     players: res.data,
   });
 }
@@ -145,7 +147,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
-  if (predictionsLocked()) {
+  if (await arePredictionsLocked()) {
     return NextResponse.json(
       { error: "Picks are locked — cannot clear picks after kickoff." },
       { status: 403 },

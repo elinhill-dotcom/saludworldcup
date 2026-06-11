@@ -21,6 +21,7 @@ export function Nav() {
   const pathname = usePathname();
   const [liveCount, setLiveCount] = useState(0);
   const [picksLocked, setPicksLocked] = useState(false);
+  const [poolSealed, setPoolSealed] = useState(false);
 
   useEffect(() => {
     const load = () =>
@@ -36,14 +37,17 @@ export function Nav() {
     const loadConfig = () =>
       fetch("/api/config")
         .then((r) => r.json())
-        .then((d) => setPicksLocked(d.locked ?? false));
+        .then((d) => {
+          setPicksLocked(d.locked ?? false);
+          setPoolSealed(d.poolSealed ?? d.locked ?? false);
+        });
     loadConfig();
     const id = setInterval(loadConfig, 60000);
     return () => clearInterval(id);
   }, []);
 
   const links = useMemo(() => {
-    if (!picksLocked) return [...baseLinks];
+    if (!poolSealed) return [...baseLinks];
     return [
       baseLinks[0],
       baseLinks[1],
@@ -51,7 +55,7 @@ export function Nav() {
       statsLink,
       ...baseLinks.slice(3),
     ];
-  }, [picksLocked]);
+  }, [poolSealed]);
 
   return (
     <nav className="nav-bar">

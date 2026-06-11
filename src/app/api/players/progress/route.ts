@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { canReadPlayerData } from "@/lib/player-auth";
-import { GROUP_MATCH_IDS } from "@/lib/matches-data";
 import { fetchPlayerProgress } from "@/lib/supabase-players";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -37,8 +36,5 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({
-    ...res.data,
-    groupTotal: GROUP_MATCH_IDS.length,
-  });
+  return NextResponse.json(res.data);
 }

@@ -54,6 +54,15 @@ async function main() {
     process.exit(1);
   }
 
+  const { error: settingsErr } = await supabase
+    .from("pool_settings")
+    .upsert({ id: 1, picks_unlock_override: false }, { onConflict: "id" });
+
+  if (settingsErr) {
+    console.error("Pool settings seed failed:", settingsErr.message);
+    process.exit(1);
+  }
+
   console.log(`Seeded ${rows.length} matches into Supabase.`);
 }
 

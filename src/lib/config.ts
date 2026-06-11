@@ -4,8 +4,14 @@ export function getPredictionLockAt(): Date {
   return new Date(raw);
 }
 
-export function predictionsLocked(now = new Date()): boolean {
+/** Deadline passed — used for stats visibility and chat rules. */
+export function predictionsLockedByTime(now = new Date()): boolean {
   return now >= getPredictionLockAt();
+}
+
+/** @deprecated Use arePredictionsLocked() for pick editing; this ignores admin reopen. */
+export function predictionsLocked(now = new Date()): boolean {
+  return predictionsLockedByTime(now);
 }
 
 export function verifyAdminPassword(password: string): boolean {

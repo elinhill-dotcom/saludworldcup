@@ -1,4 +1,4 @@
-import { GROUP_MATCH_IDS } from "@/lib/matches-data";
+import { fetchGroupMatchIds } from "@/lib/group-match-ids";
 import { countKnockoutFilled } from "@/lib/knockout-picks";
 import { mapKnockoutPick, mapPlayer } from "@/lib/supabase-mappers";
 import type { KnockoutPickRow, PlayerRow } from "@/lib/supabase-types";
@@ -214,6 +214,7 @@ export async function fetchAdminPlayers(): Promise<
       name: string;
       createdAt: string;
       groupPicksCount: number;
+      rawPicksCount: number;
       knockoutFilled: number;
       knockoutTotal: number;
       hasPassword: boolean;
@@ -232,9 +233,14 @@ export async function fetchAdminPlayers(): Promise<
     if (predsRes.error) return { data: null, error: predsRes.error.message };
     if (koRes.error) return { data: null, error: koRes.error.message };
 
-    const groupIds = new Set(GROUP_MATCH_IDS);
+    const groupRes = await fetchGroupMatchIds(supabase);
+    if (groupRes.error) return { data: null, error: groupRes.error };
+
+    const groupIds = new Set(groupRes.ids);
     const groupCount = new Map<string, number>();
+    const rawCount = new Map<string, number>();
     for (const p of predsRes.data ?? []) {
+      rawCount.set(p.player_id, (rawCount.get(p.player_id) ?? 0) + 1);
       if (!groupIds.has(p.match_id)) continue;
       groupCount.set(p.player_id, (groupCount.get(p.player_id) ?? 0) + 1);
     }
@@ -251,6 +257,7 @@ export async function fetchAdminPlayers(): Promise<
       name: row.name,
       createdAt: row.created_at,
       groupPicksCount: groupCount.get(row.id) ?? 0,
+      rawPicksCount: rawCount.get(row.id) ?? 0,
       knockoutFilled: knockoutFilled.get(row.id) ?? 0,
       knockoutTotal: 9,
       hasPassword: !!row.password_hash,
@@ -323,25 +330,23 @@ export async function fetchPlayerProgress(playerId: string): Promise<
 > {
   try {
     const supabase = getSupabaseServer();
-    const [predRes, koRes, matchRes] = await Promise.all([
+    const groupRes = await fetchGroupMatchIds(supabase);
+    if (groupRes.error) return { data: null, error: groupRes.error };
+
+    const [predRes, koRes] = await Promise.all([
       supabase
         .from("predictions")
         .select("id", { count: "exact", head: true })
         .eq("player_id", playerId)
-        .in("match_id", [...GROUP_MATCH_IDS]),
+        .in("match_id", groupRes.ids),
       supabase
         .from("knockout_picks")
         .select("*")
         .eq("player_id", playerId)
         .maybeSingle(),
-      supabase
-        .from("matches")
-        .select("id", { count: "exact", head: true })
-        .eq("stage", "group"),
     ]);
 
     if (predRes.error) return { data: null, error: predRes.error.message };
-    if (matchRes.error) return { data: null, error: matchRes.error.message };
 
     let knockoutFilled = 0;
     if (koRes.data) {
@@ -363,7 +368,7 @@ export async function fetchPlayerProgress(playerId: string): Promise<
     return {
       data: {
         groupPicksCount: predRes.count ?? 0,
-        groupTotal: matchRes.count ?? 72,
+        groupTotal: groupRes.ids.length,
         knockoutFilled,
         knockoutTotal: 9,
       },

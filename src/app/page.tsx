@@ -10,6 +10,8 @@ import { playerAuthHeaders } from "@/lib/player-session-storage";
 
 type Config = {
   locked: boolean;
+  poolSealed?: boolean;
+  picksReopened?: boolean;
   lockAt: string;
   chatScheduleShort?: string;
   jarContributionEur: number;
@@ -156,7 +158,7 @@ export default function HomePage() {
                 .
               </li>
             </ul>
-            {config?.locked && (
+            {config?.locked && !config?.picksReopened && (
               <div className="space-y-2">
                 <p className="rounded-lg bg-[var(--danger)]/20 text-[var(--danger)] px-4 py-2">
                   Picks are locked — no more bets after 11 June at 20:00.
@@ -172,6 +174,15 @@ export default function HomePage() {
                   .
                 </p>
               </div>
+            )}
+            {config?.picksReopened && (
+              <p className="rounded-lg bg-[var(--success)]/20 text-[var(--success)] px-4 py-2">
+                Picks are temporarily open again — fill in or update your tips on{" "}
+                <Link href="/picks" className="font-semibold underline">
+                  My picks
+                </Link>
+                , then save.
+              </p>
             )}
             {!config?.locked && lockLabel && (
               <p>

@@ -7,6 +7,7 @@ type AdminPlayer = {
   name: string;
   createdAt: string;
   groupPicksCount: number;
+  rawPicksCount: number;
   knockoutFilled: number;
   knockoutTotal: number;
   hasPassword: boolean;
@@ -193,6 +194,12 @@ export function AdminPlayers({ password, onMessage }: Props) {
                 {new Date(p.createdAt).toLocaleString("en-GB")} · Group picks{" "}
                 {p.groupPicksCount}/72 · Knockout {p.knockoutFilled}/
                 {p.knockoutTotal}
+                {p.rawPicksCount > p.groupPicksCount && (
+                  <span className="text-[var(--danger)]">
+                    {" "}
+                    · {p.rawPicksCount} raw rows (schedule mismatch?)
+                  </span>
+                )}
                 {p.knockoutFilled === p.knockoutTotal
                   ? " ✓"
                   : p.knockoutFilled > 0

@@ -24,6 +24,7 @@ export default function ScoreboardPage() {
   const [jarContributionEur, setJarContributionEur] = useState(10);
   const [playerCount, setPlayerCount] = useState(0);
   const [picksLocked, setPicksLocked] = useState(false);
+  const [poolSealed, setPoolSealed] = useState(false);
   const [playerStats, setPlayerStats] = useState<Map<string, PlayerPoolStats>>(
     new Map(),
   );
@@ -44,18 +45,15 @@ export default function ScoreboardPage() {
     fetch("/api/config")
       .then((r) => r.json())
       .then((cfg) => {
-        const locked = cfg.locked ?? false;
-        setPicksLocked(locked);
-        if (!locked) {
-          setPlayerStats(new Map());
-        }
+        setPicksLocked(cfg.locked ?? false);
+        setPoolSealed(cfg.poolSealed ?? false);
       });
 
     fetch("/api/stats")
       .then((r) => r.json())
       .then((data) => {
         if (data.locked && data.players) {
-          setPicksLocked(true);
+          setPoolSealed(true);
           setPlayerStats(
             new Map(
               (data.players as PlayerPoolStats[]).map((p) => [p.playerId, p]),
@@ -67,7 +65,7 @@ export default function ScoreboardPage() {
       });
   }, []);
 
-  const canViewPlayerStats = picksLocked;
+  const canViewPlayerStats = poolSealed;
   const showPickStatus = !picksLocked;
 
   return (
