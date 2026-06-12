@@ -3,14 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { MatchPoolInsight } from "@/components/MatchPoolInsight";
 import { PlayerStatsModal } from "@/components/PlayerStatsModal";
+import { usePlayerSession } from "@/hooks/usePlayerSession";
+import { playerAuthHeaders } from "@/lib/player-session-storage";
 import type {
   KnockoutPoolStats,
   MatchPoolStats,
   PlayerPoolStats,
   TeamPoolStats,
 } from "@/lib/pool-stats";
+import type { KnockoutFormState } from "@/lib/knockout-picks";
 
 export default function StatsPage() {
+  const { player } = usePlayerSession();
   const [locked, setLocked] = useState<boolean | null>(null);
   const [lockAt, setLockAt] = useState("");
   const [teams, setTeams] = useState<TeamPoolStats[]>([]);
@@ -22,6 +26,10 @@ export default function StatsPage() {
     null,
   );
   const [matchFilter, setMatchFilter] = useState("");
+  const [myPicksByMatch, setMyPicksByMatch] = useState<
+    Map<number, { home: number; away: number }>
+  >(new Map());
+  const [myKnockout, setMyKnockout] = useState<KnockoutFormState | null>(null);
   const [tab, setTab] = useState<"teams" | "matches" | "knockout" | "players">(
     "teams",
   );
@@ -41,6 +49,46 @@ export default function StatsPage() {
         }
       });
   }, []);
+
+  useEffect(() => {
+    if (!player || !locked) {
+      setMyPicksByMatch(new Map());
+      setMyKnockout(null);
+      return;
+    }
+
+    const authHeaders = playerAuthHeaders();
+    Promise.all([
+      fetch(`/api/predictions?playerId=${player.id}`, { headers: authHeaders }),
+      fetch(`/api/knockout-picks?playerId=${player.id}`, { headers: authHeaders }),
+    ])
+      .then(async ([pRes, kRes]) => {
+        const pData = await pRes.json();
+        const kData = await kRes.json();
+        if (pRes.ok && pData.predictions) {
+          const map = new Map<number, { home: number; away: number }>();
+          for (const p of pData.predictions as {
+            matchId: number;
+            homeScore: number;
+            awayScore: number;
+          }[]) {
+            map.set(p.matchId, { home: p.homeScore, away: p.awayScore });
+          }
+          setMyPicksByMatch(map);
+        } else {
+          setMyPicksByMatch(new Map());
+        }
+        if (kRes.ok && kData.pick) {
+          setMyKnockout(kData.pick);
+        } else {
+          setMyKnockout(null);
+        }
+      })
+      .catch(() => {
+        setMyPicksByMatch(new Map());
+        setMyKnockout(null);
+      });
+  }, [player, locked]);
 
   const topTeams = useMemo(() => teams.slice(0, 8), [teams]);
   const bottomTeams = useMemo(() => [...teams].reverse().slice(0, 8), [teams]);
@@ -88,6 +136,11 @@ export default function StatsPage() {
         <h2 className="text-xl font-semibold">How has Salud bet?</h2>
         <p className="text-sm text-[var(--muted)] mt-1">
           What the office collectively predicts — based on {playerCount} players&apos; picks.
+          {player && (
+            <span className="block mt-1 text-[var(--accent)]">
+              Logged in as {player.name} — your picks are shown on Matches and Knockout.
+            </span>
+          )}
         </p>
       </div>
 
@@ -212,14 +265,59 @@ export default function StatsPage() {
               <p className="font-semibold mb-3">
                 {m.homeTeam} – {m.awayTeam}
               </p>
-              <MatchPoolInsight stats={m} />
+              <MatchPoolInsight
+                stats={m}
+                yourPick={
+                  player
+                    ? (myPicksByMatch.get(m.matchId) ?? null)
+                    : undefined
+                }
+              />
             </article>
           ))}
         </div>
       )}
 
       {tab === "knockout" && knockout && (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-4">
+          {player && myKnockout && (
+            <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
+              <h3 className="font-semibold text-[var(--accent)] mb-3">Your knockout picks</h3>
+              <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-[var(--muted)] text-xs">Semifinal 1</dt>
+                  <dd className="font-medium">
+                    {myKnockout.sf1Home || "—"} vs {myKnockout.sf1Away || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--muted)] text-xs">Semifinal 2</dt>
+                  <dd className="font-medium">
+                    {myKnockout.sf2Home || "—"} vs {myKnockout.sf2Away || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--muted)] text-xs">Final</dt>
+                  <dd className="font-medium">
+                    {myKnockout.finalHome || "—"} vs {myKnockout.finalAway || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--muted)] text-xs">Bronze</dt>
+                  <dd className="font-medium">
+                    {myKnockout.bronzeHome || "—"} vs {myKnockout.bronzeAway || "—"}
+                  </dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-[var(--muted)] text-xs">Champion</dt>
+                  <dd className="font-semibold text-[var(--accent)]">
+                    {myKnockout.champion || "—"}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
           <KnockoutStatBlock
             title="World Cup winner"
             items={knockout.champion}
@@ -236,6 +334,7 @@ export default function StatsPage() {
             pickCount={knockout.pickCount}
             className="sm:col-span-2"
           />
+        </div>
         </div>
       )}
 

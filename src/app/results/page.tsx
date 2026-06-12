@@ -1,17 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MatchPoolInsight } from "@/components/MatchPoolInsight";
+import { MatchPoolInsight, YourPickLine } from "@/components/MatchPoolInsight";
+import type { MatchView } from "@/components/MatchCard";
+import { usePlayerSession } from "@/hooks/usePlayerSession";
 import { formatCestMatchKickoff } from "@/lib/datetime";
 import { winnerLabel } from "@/lib/pick-feedback";
 import type { MatchPoolStats } from "@/lib/pool-stats";
-import type { MatchView } from "@/components/MatchCard";
+import { playerAuthHeaders } from "@/lib/player-session-storage";
 
 export default function ResultsPage() {
+  const { player } = usePlayerSession();
   const [matches, setMatches] = useState<MatchView[]>([]);
   const [poolByMatch, setPoolByMatch] = useState<Map<number, MatchPoolStats>>(
     new Map(),
   );
+  const [myPicksByMatch, setMyPicksByMatch] = useState<
+    Map<number, { home: number; away: number }>
+  >(new Map());
   const [picksLocked, setPicksLocked] = useState(false);
   const [filter, setFilter] = useState<"all" | "finished" | "upcoming">("all");
   const [group, setGroup] = useState<string>("all");
@@ -34,6 +40,34 @@ export default function ResultsPage() {
         }
       });
   }, []);
+
+  useEffect(() => {
+    if (!player) {
+      setMyPicksByMatch(new Map());
+      return;
+    }
+
+    fetch(`/api/predictions?playerId=${player.id}`, {
+      headers: playerAuthHeaders(),
+    })
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok || !data.predictions) {
+          setMyPicksByMatch(new Map());
+          return;
+        }
+        const map = new Map<number, { home: number; away: number }>();
+        for (const p of data.predictions as {
+          matchId: number;
+          homeScore: number;
+          awayScore: number;
+        }[]) {
+          map.set(p.matchId, { home: p.homeScore, away: p.awayScore });
+        }
+        setMyPicksByMatch(map);
+      })
+      .catch(() => setMyPicksByMatch(new Map()));
+  }, [player]);
 
   const groups = useMemo(() => {
     const codes = new Set(
@@ -68,8 +102,20 @@ export default function ResultsPage() {
         <h2 className="text-xl font-semibold">Match results</h2>
         <p className="text-sm text-[var(--muted)] mt-2">
           All group-stage results in one place. Results are added after each
-          match — check <strong className="text-white">My picks</strong> to see
-          if you got the winner right.
+          match.
+          {player ? (
+            <>
+              {" "}
+              Logged in as <strong className="text-white">{player.name}</strong>
+              — your picks are shown under each match.
+            </>
+          ) : (
+            <>
+              {" "}
+              Log in on <strong className="text-white">My picks</strong> to see
+              your bets here.
+            </>
+          )}
         </p>
         {picksLocked && (
           <p className="text-sm text-[var(--accent)] mt-2">
@@ -128,6 +174,10 @@ export default function ResultsPage() {
             <div className="space-y-3">
               {dayMatches.map((m) => {
                 const pool = poolByMatch.get(m.id);
+                const myPick = player
+                  ? (myPicksByMatch.get(m.id) ?? null)
+                  : undefined;
+
                 return (
                   <article
                     key={m.id}
@@ -165,9 +215,23 @@ export default function ResultsPage() {
                         </p>
                       </div>
                     </div>
-                    {picksLocked && pool && (
-                      <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                        <MatchPoolInsight stats={pool} variant="card" />
+                    {(player || (picksLocked && pool)) && (
+                      <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-3">
+                        {player &&
+                          (myPick ? (
+                            <YourPickLine
+                              yourPick={myPick}
+                              homeTeam={m.homeTeam}
+                              awayTeam={m.awayTeam}
+                            />
+                          ) : (
+                            <p className="text-xs text-[var(--muted)]">
+                              You didn&apos;t pick this match.
+                            </p>
+                          ))}
+                        {picksLocked && pool && (
+                          <MatchPoolInsight stats={pool} variant="card" />
+                        )}
                       </div>
                     )}
                   </article>

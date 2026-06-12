@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AdminPlayerPicksEditor } from "@/components/AdminPlayerPicksEditor";
 
 type AdminPlayer = {
   id: string;
@@ -26,6 +27,7 @@ export function AdminPlayers({ password, onMessage }: Props) {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [editingPlayer, setEditingPlayer] = useState<AdminPlayer | null>(null);
 
   const headers = {
     "Content-Type": "application/json",
@@ -179,8 +181,8 @@ export function AdminPlayers({ password, onMessage }: Props) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-[var(--muted)]">
-        Fix duplicate sign-ups, rename typos, or reopen picks for individual
-        players after the deadline.
+        Fix duplicate sign-ups, rename typos, reopen picks, or tap a name to
+        view and edit their bets.
         {locked && !deadlinePassed && (
           <span className="block mt-2 text-[var(--danger)]">
             Picks are locked — you can still rename or delete players, but not
@@ -217,14 +219,23 @@ export function AdminPlayers({ password, onMessage }: Props) {
               }`}
             >
               <div className="flex flex-wrap gap-2 items-center mb-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingPlayer(p)}
+                  className="flex-1 min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 font-semibold text-left hover:border-[var(--accent)] hover:text-[var(--accent)] transition"
+                >
+                  {p.name}
+                </button>
                 <input
                   type="text"
                   value={edits[p.id] ?? p.name}
                   onChange={(e) =>
                     setEdits((prev) => ({ ...prev, [p.id]: e.target.value }))
                   }
-                  className="flex-1 min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 font-semibold"
+                  className="flex-1 min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm"
                   maxLength={80}
+                  aria-label={`Rename ${p.name}`}
+                  placeholder="Rename…"
                 />
                 <button
                   type="button"
@@ -314,6 +325,22 @@ export function AdminPlayers({ password, onMessage }: Props) {
       >
         Refresh list
       </button>
+
+      {editingPlayer && (
+        <AdminPlayerPicksEditor
+          player={{ id: editingPlayer.id, name: editingPlayer.name }}
+          password={password}
+          onClose={() => {
+            setEditingPlayer(null);
+            load();
+          }}
+          onSaved={(msg) => {
+            onMessage(msg);
+            load();
+          }}
+          onError={(msg) => onMessage(msg, true)}
+        />
+      )}
     </div>
   );
 }
