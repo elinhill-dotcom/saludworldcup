@@ -11,6 +11,7 @@ type AdminPlayer = {
   knockoutFilled: number;
   knockoutTotal: number;
   hasPassword: boolean;
+  picksReopened: boolean;
 };
 
 type Props = {
@@ -21,8 +22,10 @@ type Props = {
 export function AdminPlayers({ password, onMessage }: Props) {
   const [players, setPlayers] = useState<AdminPlayer[]>([]);
   const [locked, setLocked] = useState(false);
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const headers = {
     "Content-Type": "application/json",
@@ -41,6 +44,7 @@ export function AdminPlayers({ password, onMessage }: Props) {
     }
     setPlayers(data.players);
     setLocked(data.locked);
+    setDeadlinePassed(data.deadlinePassed ?? false);
     const names: Record<string, string> = {};
     for (const p of data.players) {
       names[p.id] = p.name;
@@ -67,6 +71,32 @@ export function AdminPlayers({ password, onMessage }: Props) {
       return;
     }
     onMessage(`Renamed to "${data.player.name}".`);
+    load();
+  }
+
+  async function togglePicksUnlock(playerId: string, playerName: string, reopen: boolean) {
+    setTogglingId(playerId);
+    onMessage("");
+    const res = await fetch("/api/admin/players", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        action: "set-picks-unlock",
+        playerId,
+        reopenPicks: reopen,
+      }),
+    });
+    const data = await res.json();
+    setTogglingId(null);
+    if (!res.ok) {
+      onMessage(data.error ?? "Could not update pick access", true);
+      return;
+    }
+    onMessage(
+      reopen
+        ? `Picks reopened for ${playerName}.`
+        : `Picks locked again for ${playerName}.`,
+    );
     load();
   }
 
@@ -149,12 +179,19 @@ export function AdminPlayers({ password, onMessage }: Props) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-[var(--muted)]">
-        Fix duplicate sign-ups, rename typos, or let someone redo their picks
-        before the tournament starts.
-        {locked && (
+        Fix duplicate sign-ups, rename typos, or reopen picks for individual
+        players after the deadline.
+        {locked && !deadlinePassed && (
           <span className="block mt-2 text-[var(--danger)]">
             Picks are locked — you can still rename or delete players, but not
             clear picks.
+          </span>
+        )}
+        {deadlinePassed && (
+          <span className="block mt-2">
+            After the deadline, use{" "}
+            <strong className="text-white">Allow picks</strong> on one player at
+            a time so only they can edit and save.
           </span>
         )}
       </p>
@@ -165,10 +202,19 @@ export function AdminPlayers({ password, onMessage }: Props) {
         <p className="text-sm text-[var(--muted)]">No players yet.</p>
       ) : (
         <ul className="space-y-3">
-          {players.map((p) => (
+          {players.map((p) => {
+            const canClear =
+              !locked || p.picksReopened;
+            const toggling = togglingId === p.id;
+
+            return (
             <li
               key={p.id}
-              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4"
+              className={`rounded-xl border bg-[var(--card)] p-4 ${
+                p.picksReopened
+                  ? "border-[var(--success)]/50"
+                  : "border-[var(--border)]"
+              }`}
             >
               <div className="flex flex-wrap gap-2 items-center mb-2">
                 <input
@@ -206,12 +252,36 @@ export function AdminPlayers({ password, onMessage }: Props) {
                     ? " (incomplete)"
                     : ""}
                 {p.hasPassword ? " · Password set" : " · No password yet"}
+                {p.picksReopened && (
+                  <span className="text-[var(--success)]"> · Picks open</span>
+                )}
               </p>
               <div className="flex flex-wrap gap-2">
+                {deadlinePassed && (
+                  p.picksReopened ? (
+                    <button
+                      type="button"
+                      onClick={() => togglePicksUnlock(p.id, p.name, false)}
+                      disabled={toggling}
+                      className="rounded-lg border border-[var(--danger)]/50 text-[var(--danger)] px-3 py-1.5 text-sm hover:bg-[var(--danger)]/10 disabled:opacity-40"
+                    >
+                      {toggling ? "…" : "Lock picks"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => togglePicksUnlock(p.id, p.name, true)}
+                      disabled={toggling}
+                      className="rounded-lg bg-[var(--success)] px-3 py-1.5 text-sm font-semibold text-[var(--accent-foreground)] disabled:opacity-40"
+                    >
+                      {toggling ? "…" : "Allow picks"}
+                    </button>
+                  )
+                )}
                 <button
                   type="button"
                   onClick={() => clearPicks(p.id, p.name)}
-                  disabled={locked}
+                  disabled={!canClear}
                   className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-40"
                 >
                   Clear picks
@@ -232,7 +302,8 @@ export function AdminPlayers({ password, onMessage }: Props) {
                 </button>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { arePredictionsLocked } from "@/lib/predictions-lock";
 import { predictionsLockedByTime } from "@/lib/config";
+import { setPlayerPicksUnlockOverride } from "@/lib/pool-settings";
 import { clearPlayerPicks } from "@/lib/supabase-predictions";
 import {
   clearPlayerPassword,
@@ -143,11 +144,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  if (body.action === "set-picks-unlock") {
+    if (!predictionsLockedByTime()) {
+      return NextResponse.json(
+        { error: "Deadline has not passed — picks are already open for everyone." },
+        { status: 400 },
+      );
+    }
+
+    if (typeof body.reopenPicks !== "boolean") {
+      return NextResponse.json(
+        { error: "Send reopenPicks: true or false." },
+        { status: 400 },
+      );
+    }
+
+    const playerRes = await findPlayerById(playerId);
+    if (playerRes.error) {
+      return NextResponse.json({ error: playerRes.error }, { status: 500 });
+    }
+    if (!playerRes.data) {
+      return NextResponse.json({ error: "Player not found" }, { status: 404 });
+    }
+
+    const unlockRes = await setPlayerPicksUnlockOverride(
+      playerId,
+      body.reopenPicks,
+    );
+    if (unlockRes.error) {
+      return NextResponse.json({ error: unlockRes.error }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      picksReopened: unlockRes.data ?? false,
+    });
+  }
+
   if (body.action !== "clear-picks") {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
-  if (await arePredictionsLocked()) {
+  if (await arePredictionsLocked(playerId)) {
     return NextResponse.json(
       { error: "Picks are locked — cannot clear picks after kickoff." },
       { status: 403 },

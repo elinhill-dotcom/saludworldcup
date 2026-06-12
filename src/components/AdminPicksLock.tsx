@@ -85,13 +85,14 @@ export function AdminPicksLock({ password, onMessage }: Props) {
               state.picksReopened ? (
                 <>
                   The deadline has passed, but picks are{" "}
-                  <strong className="text-white">temporarily open</strong> for
-                  late submissions.
+                  <strong className="text-white">temporarily open for everyone</strong>.
                 </>
               ) : (
                 <>
-                  The deadline has passed — picks are{" "}
-                  <strong className="text-white">locked</strong> for all players.
+                  The deadline has passed — picks are locked for most players. Open
+                  picks for one person at a time under{" "}
+                  <strong className="text-white">Players → Allow picks</strong>, or
+                  reopen for everyone below.
                 </>
               )
             ) : (
@@ -110,7 +111,7 @@ export function AdminPicksLock({ password, onMessage }: Props) {
                   disabled={toggling}
                   className="rounded-lg bg-[var(--success)] px-4 py-2 text-sm font-semibold text-[var(--accent-foreground)] disabled:opacity-50"
                 >
-                  {toggling ? "Updating…" : "Re-open picks for players"}
+                  {toggling ? "Updating…" : "Re-open picks for everyone"}
                 </button>
               ) : (
                 <button

@@ -5,6 +5,7 @@ export type PlayerRow = {
   name: string;
   created_at: string;
   password_hash: string | null;
+  picks_unlock_override?: boolean;
 };
 
 export type MatchRow = {

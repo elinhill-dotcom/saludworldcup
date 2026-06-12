@@ -9,7 +9,7 @@ export async function canReadPlayerData(
   password: string | null,
 ): Promise<DbResult<boolean>> {
   const deadlinePassed = predictionsLockedByTime();
-  const picksLocked = await arePredictionsLocked();
+  const picksLocked = await arePredictionsLocked(playerId);
 
   if (deadlinePassed && picksLocked) {
     return { data: true, error: null };
@@ -49,7 +49,7 @@ export async function canWritePlayerData(
   playerId: string,
   password: string | null,
 ): Promise<DbResult<boolean>> {
-  if (await arePredictionsLocked()) {
+  if (await arePredictionsLocked(playerId)) {
     return { data: false, error: null };
   }
   return canReadPlayerData(playerId, password);

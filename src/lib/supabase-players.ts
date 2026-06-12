@@ -218,6 +218,7 @@ export async function fetchAdminPlayers(): Promise<
       knockoutFilled: number;
       knockoutTotal: number;
       hasPassword: boolean;
+      picksReopened: boolean;
     }[]
   >
 > {
@@ -261,6 +262,7 @@ export async function fetchAdminPlayers(): Promise<
       knockoutFilled: knockoutFilled.get(row.id) ?? 0,
       knockoutTotal: 9,
       hasPassword: !!row.password_hash,
+      picksReopened: !!row.picks_unlock_override,
     }));
 
     return { data: players, error: null };

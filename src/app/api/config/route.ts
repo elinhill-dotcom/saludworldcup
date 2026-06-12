@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getPredictionLockAt, predictionsLockedByTime } from "@/lib/config";
 import { describeChatWindow } from "@/lib/match-live";
 import {
@@ -8,19 +8,35 @@ import {
 } from "@/lib/matches-data";
 import { KNOCKOUT_POINTS } from "@/lib/knockout-scoring";
 import { getPicksUnlockOverride } from "@/lib/pool-settings";
-import { arePredictionsLocked } from "@/lib/predictions-lock";
+import {
+  arePredictionsLocked,
+  isPlayerPicksReopened,
+} from "@/lib/predictions-lock";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const chat = describeChatWindow();
   const deadlinePassed = predictionsLockedByTime();
-  const overrideRes = await getPicksUnlockOverride();
-  const picksReopened = deadlinePassed && (overrideRes.data ?? false);
-  const locked = await arePredictionsLocked();
+  const playerId = req.nextUrl.searchParams.get("playerId");
+
+  const globalOverrideRes = await getPicksUnlockOverride();
+  const globalReopened = deadlinePassed && (globalOverrideRes.data ?? false);
+
+  let locked: boolean;
+  let picksReopened: boolean;
+
+  if (playerId) {
+    locked = await arePredictionsLocked(playerId);
+    picksReopened = await isPlayerPicksReopened(playerId);
+  } else {
+    locked = await arePredictionsLocked();
+    picksReopened = globalReopened;
+  }
 
   return NextResponse.json({
     locked,
     poolSealed: deadlinePassed,
     picksReopened,
+    globalPicksReopened: globalReopened,
     lockAt: getPredictionLockAt().toISOString(),
     jarContributionEur: JAR_CONTRIBUTION_EUR,
     pointsExact: POINTS_EXACT,

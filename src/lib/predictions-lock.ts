@@ -1,18 +1,37 @@
 import { predictionsLockedByTime } from "@/lib/config";
-import { getPicksUnlockOverride } from "@/lib/pool-settings";
+import {
+  getPicksUnlockOverride,
+  getPlayerPicksUnlockOverride,
+} from "@/lib/pool-settings";
 
-/** True when players cannot save or edit picks. */
-export async function arePredictionsLocked(): Promise<boolean> {
+/** True when a player cannot save or edit picks. */
+export async function arePredictionsLocked(
+  playerId?: string,
+): Promise<boolean> {
   if (!predictionsLockedByTime()) return false;
-  const overrideRes = await getPicksUnlockOverride();
-  if (overrideRes.error) {
-    // Fail closed — keep locked if settings cannot be read.
-    return true;
+
+  const globalRes = await getPicksUnlockOverride();
+  if (globalRes.error) return true;
+  if (globalRes.data) return false;
+
+  if (playerId) {
+    const playerRes = await getPlayerPicksUnlockOverride(playerId);
+    if (playerRes.error) return true;
+    if (playerRes.data) return false;
   }
-  return !overrideRes.data;
+
+  return true;
 }
 
 /** True once the deadline has passed (stats/scoreboard stay open regardless of admin reopen). */
 export function isPoolSealed(now = new Date()): boolean {
   return predictionsLockedByTime(now);
+}
+
+/** True when this player may edit picks after the deadline (global or individual reopen). */
+export async function isPlayerPicksReopened(
+  playerId: string,
+): Promise<boolean> {
+  if (!predictionsLockedByTime()) return false;
+  return !(await arePredictionsLocked(playerId));
 }

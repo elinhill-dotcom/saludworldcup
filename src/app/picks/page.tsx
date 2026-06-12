@@ -50,7 +50,7 @@ export default function PicksPage() {
       fetch("/api/matches?stage=group"),
       fetch(`/api/predictions?playerId=${playerId}`, { headers: authHeaders }),
       fetch(`/api/knockout-picks?playerId=${playerId}`, { headers: authHeaders }),
-      fetch("/api/config"),
+      fetch(`/api/config?playerId=${encodeURIComponent(playerId)}`),
     ]);
     const mData = await mRes.json();
     const pData = await pRes.json();
@@ -142,7 +142,9 @@ export default function PicksPage() {
     if (!player) return;
 
     const refreshLock = async () => {
-      const res = await fetch("/api/config");
+      const res = await fetch(
+        `/api/config?playerId=${encodeURIComponent(player.id)}`,
+      );
       const cfg = await res.json();
       const nowLocked = cfg.locked ?? false;
       if (nowLocked && !wasLockedRef.current) {

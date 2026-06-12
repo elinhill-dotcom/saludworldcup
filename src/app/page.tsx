@@ -35,6 +35,7 @@ type Progress = {
 export default function HomePage() {
   const { player, remember, signOut } = usePlayerSession();
   const [config, setConfig] = useState<Config | null>(null);
+  const [playerConfig, setPlayerConfig] = useState<Config | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
 
   useEffect(() => {
@@ -42,6 +43,16 @@ export default function HomePage() {
       .then((r) => r.json())
       .then(setConfig);
   }, []);
+
+  useEffect(() => {
+    if (!player) {
+      setPlayerConfig(null);
+      return;
+    }
+    fetch(`/api/config?playerId=${encodeURIComponent(player.id)}`)
+      .then((r) => r.json())
+      .then(setPlayerConfig);
+  }, [player]);
 
   useEffect(() => {
     if (!player) {
@@ -60,6 +71,10 @@ export default function HomePage() {
   }, [player]);
 
   const lockLabel = config ? formatCestDateTime(config.lockAt) : "";
+  const picksCfg = player ? (playerConfig ?? config) : config;
+  const showLockedBanner =
+    picksCfg?.locked && !picksCfg?.picksReopened;
+  const showReopenedBanner = picksCfg?.picksReopened;
 
   const kp = config?.knockoutPoints;
 
@@ -158,7 +173,7 @@ export default function HomePage() {
                 .
               </li>
             </ul>
-            {config?.locked && !config?.picksReopened && (
+            {showLockedBanner && (
               <div className="space-y-2">
                 <p className="rounded-lg bg-[var(--danger)]/20 text-[var(--danger)] px-4 py-2">
                   Picks are locked — no more bets after 11 June at 20:00.
@@ -175,16 +190,18 @@ export default function HomePage() {
                 </p>
               </div>
             )}
-            {config?.picksReopened && (
+            {showReopenedBanner && (
               <p className="rounded-lg bg-[var(--success)]/20 text-[var(--success)] px-4 py-2">
-                Picks are temporarily open again — fill in or update your tips on{" "}
+                {player
+                  ? "Your picks are open again — fill in or update your tips on "
+                  : "Picks are temporarily open again — fill in or update your tips on "}
                 <Link href="/picks" className="font-semibold underline">
                   My picks
                 </Link>
                 , then save.
               </p>
             )}
-            {!config?.locked && lockLabel && (
+            {!picksCfg?.locked && lockLabel && (
               <p>
                 All picks lock on{" "}
                 <strong className="text-white">11 June at 20:00</strong> ({lockLabel}).

@@ -6,7 +6,8 @@ create table if not exists players (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   created_at timestamptz not null default now(),
-  password_hash text
+  password_hash text,
+  picks_unlock_override boolean not null default false
 );
 
 create table if not exists matches (

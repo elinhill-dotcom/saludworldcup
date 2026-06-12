@@ -38,3 +38,43 @@ export async function setPicksUnlockOverride(
     return { data: null, error: toErrorMessage(e) };
   }
 }
+
+export async function getPlayerPicksUnlockOverride(
+  playerId: string,
+): Promise<DbResult<boolean>> {
+  try {
+    const supabase = getSupabaseServer();
+    const { data, error } = await supabase
+      .from("players")
+      .select("picks_unlock_override")
+      .eq("id", playerId)
+      .maybeSingle();
+
+    if (error) return { data: null, error: error.message };
+    if (!data) return { data: false, error: null };
+    return {
+      data: !!(data as { picks_unlock_override?: boolean }).picks_unlock_override,
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: toErrorMessage(e) };
+  }
+}
+
+export async function setPlayerPicksUnlockOverride(
+  playerId: string,
+  enabled: boolean,
+): Promise<DbResult<boolean>> {
+  try {
+    const supabase = getSupabaseServer();
+    const { error } = await supabase
+      .from("players")
+      .update({ picks_unlock_override: enabled })
+      .eq("id", playerId);
+
+    if (error) return { data: null, error: error.message };
+    return { data: enabled, error: null };
+  } catch (e) {
+    return { data: null, error: toErrorMessage(e) };
+  }
+}
