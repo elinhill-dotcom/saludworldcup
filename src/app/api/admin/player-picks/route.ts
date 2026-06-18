@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
+import { countKnockoutFilled, KNOCKOUT_PICK_COUNT } from "@/lib/knockout-picks";
+import { fetchGroupMatchIds } from "@/lib/group-match-ids";
 import type { KnockoutFormState } from "@/lib/knockout-picks";
 import { findPlayerById } from "@/lib/supabase-players";
 import {
@@ -8,7 +10,7 @@ import {
   saveGroupPredictions,
   saveKnockoutPick,
 } from "@/lib/supabase-predictions";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured, getSupabaseServer } from "@/lib/supabase";
 import { toEnglishTeam } from "@/lib/team-names";
 import { ALL_TEAMS } from "@/lib/teams";
 
@@ -126,10 +128,33 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const supabase = getSupabaseServer();
+  const groupRes2 = await fetchGroupMatchIds(supabase);
+  const groupTotal = groupRes2.ids.length;
+
+  const knockoutFilled = countKnockoutFilled(koRes.data);
+
+  if (
+    groupRes.data.submittedCount > 0 &&
+    groupRes.data.savedCount < groupRes.data.submittedCount
+  ) {
+    return NextResponse.json(
+      {
+        error: `Only ${groupRes.data.savedCount}/${groupRes.data.submittedCount} scores were stored. Check the match schedule in Supabase.`,
+      },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     savedCount: groupRes.data.savedCount,
     submittedCount: groupRes.data.submittedCount,
+    writtenCount: groupRes.data.writtenCount,
+    groupPicksCount: groupRes.data.savedCount,
+    groupTotal,
+    knockoutFilled,
+    knockoutTotal: KNOCKOUT_PICK_COUNT,
     knockout: koRes.data,
   });
 }

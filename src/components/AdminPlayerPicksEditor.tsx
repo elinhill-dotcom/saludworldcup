@@ -18,11 +18,17 @@ type PlayerInfo = {
   name: string;
 };
 
+export type AdminPlayerPicksSaveResult = {
+  message: string;
+  groupPicksCount: number;
+  knockoutFilled: number;
+};
+
 type Props = {
   player: PlayerInfo;
   password: string;
   onClose: () => void;
-  onSaved: (message: string) => void;
+  onSaved: (result: AdminPlayerPicksSaveResult) => void;
   onError: (message: string) => void;
 };
 
@@ -41,71 +47,85 @@ export function AdminPlayerPicksEditor({
   const [tab, setTab] = useState<"group" | "knockout">("group");
   const [filter, setFilter] = useState<"all" | "missing">("all");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [statusIsError, setStatusIsError] = useState(false);
 
-  const headers = {
-    "Content-Type": "application/json",
-    "x-admin-password": password,
-  };
+  const headers = useMemo(
+    () => ({
+      "Content-Type": "application/json",
+      "x-admin-password": password,
+    }),
+    [password],
+  );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setLoadError("");
-    try {
-      const [mRes, pRes] = await Promise.all([
-        fetch("/api/matches?stage=group"),
-        fetch(`/api/admin/player-picks?playerId=${player.id}`, { headers }),
-      ]);
-      const mData = await mRes.json();
-      const pData = await pRes.json();
+  const load = useCallback(
+    async (silent = false) => {
+      if (silent) setRefreshing(true);
+      else setLoading(true);
+      setLoadError("");
+      try {
+        const [mRes, pRes] = await Promise.all([
+          fetch("/api/matches?stage=group", { cache: "no-store" }),
+          fetch(`/api/admin/player-picks?playerId=${player.id}`, {
+            headers,
+            cache: "no-store",
+          }),
+        ]);
+        const mData = await mRes.json();
+        const pData = await pRes.json();
 
-      if (!mRes.ok) {
-        setLoadError(mData.error ?? "Could not load matches");
-        return;
+        if (!mRes.ok) {
+          setLoadError(mData.error ?? "Could not load matches");
+          return;
+        }
+        if (!pRes.ok) {
+          setLoadError(pData.error ?? "Could not load player picks");
+          return;
+        }
+
+        const ms = (mData.matches ?? []) as MatchView[];
+        setMatches(ms);
+
+        const map: PredMap = {};
+        for (const m of ms) {
+          map[m.id] = { home: "", away: "" };
+        }
+        for (const p of pData.predictions ?? []) {
+          map[p.matchId] = {
+            home: String(p.homeScore),
+            away: String(p.awayScore),
+          };
+        }
+        setPreds(map);
+
+        const pick = pData.knockout;
+        if (pick) {
+          setKnockout({
+            sf1Home: pick.sf1Home ?? "",
+            sf1Away: pick.sf1Away ?? "",
+            sf2Home: pick.sf2Home ?? "",
+            sf2Away: pick.sf2Away ?? "",
+            finalHome: pick.finalHome ?? "",
+            finalAway: pick.finalAway ?? "",
+            bronzeHome: pick.bronzeHome ?? "",
+            bronzeAway: pick.bronzeAway ?? "",
+            champion: pick.champion ?? "",
+          });
+        } else {
+          setKnockout(emptyKnockoutForm());
+        }
+      } catch {
+        setLoadError("Could not load data.");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-      if (!pRes.ok) {
-        setLoadError(pData.error ?? "Could not load player picks");
-        return;
-      }
-
-      const ms = (mData.matches ?? []) as MatchView[];
-      setMatches(ms);
-
-      const map: PredMap = {};
-      for (const m of ms) {
-        map[m.id] = { home: "", away: "" };
-      }
-      for (const p of pData.predictions ?? []) {
-        map[p.matchId] = {
-          home: String(p.homeScore),
-          away: String(p.awayScore),
-        };
-      }
-      setPreds(map);
-
-      const pick = pData.knockout;
-      if (pick) {
-        setKnockout({
-          sf1Home: pick.sf1Home ?? "",
-          sf1Away: pick.sf1Away ?? "",
-          sf2Home: pick.sf2Home ?? "",
-          sf2Away: pick.sf2Away ?? "",
-          finalHome: pick.finalHome ?? "",
-          finalAway: pick.finalAway ?? "",
-          bronzeHome: pick.bronzeHome ?? "",
-          bronzeAway: pick.bronzeAway ?? "",
-          champion: pick.champion ?? "",
-        });
-      } else {
-        setKnockout(emptyKnockoutForm());
-      }
-    } catch {
-      setLoadError("Could not load data.");
-    } finally {
-      setLoading(false);
-    }
-  }, [player.id, password]);
+    },
+    [player.id, headers],
+  );
 
   useEffect(() => {
     load();
@@ -142,6 +162,8 @@ export function AdminPlayerPicksEditor({
 
   async function save() {
     setSaving(true);
+    setStatusMessage("");
+    setStatusIsError(false);
     onError("");
 
     const items = Object.entries(preds)
@@ -152,9 +174,17 @@ export function AdminPlayerPicksEditor({
         awayScore: Number(v.away),
       }));
 
+    if (items.length === 0 && knockoutFilled === 0) {
+      setSaving(false);
+      setStatusMessage("Fill in at least one score or knockout pick before saving.");
+      setStatusIsError(true);
+      return;
+    }
+
     const res = await fetch("/api/admin/player-picks", {
       method: "POST",
       headers,
+      cache: "no-store",
       body: JSON.stringify({
         playerId: player.id,
         predictions: items,
@@ -165,14 +195,27 @@ export function AdminPlayerPicksEditor({
     setSaving(false);
 
     if (!res.ok) {
-      onError(data.error ?? "Save failed");
+      const msg = data.error ?? "Save failed";
+      setStatusMessage(msg);
+      setStatusIsError(true);
+      onError(msg);
       return;
     }
 
-    await load();
-    onSaved(
-      `Saved for ${player.name}: ${data.savedCount}/${matches.length} group scores, knockout ${knockoutFilled}/${KNOCKOUT_PICK_COUNT}.`,
-    );
+    const groupPicksCount = data.groupPicksCount ?? data.savedCount ?? 0;
+    const koFilled = data.knockoutFilled ?? knockoutFilled;
+    const groupTotal = data.groupTotal ?? matches.length;
+    const msg = `Saved on server: ${groupPicksCount}/${groupTotal} group scores, knockout ${koFilled}/${KNOCKOUT_PICK_COUNT}.`;
+
+    setStatusMessage(msg);
+    setStatusIsError(false);
+
+    await load(true);
+    onSaved({
+      message: `Saved for ${player.name}: ${groupPicksCount}/${groupTotal} group, knockout ${koFilled}/${KNOCKOUT_PICK_COUNT}.`,
+      groupPicksCount,
+      knockoutFilled: koFilled,
+    });
   }
 
   return (
@@ -188,6 +231,13 @@ export function AdminPlayerPicksEditor({
             <h2 id="admin-picks-title" className="text-lg font-semibold">
               {player.name}
             </h2>
+            {!loading && (
+              <p className="text-xs text-[var(--muted)] mt-0.5">
+                Group {filledGroup}/{matches.length} · Knockout {knockoutFilled}/
+                {KNOCKOUT_PICK_COUNT}
+                {refreshing && " · Refreshing…"}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -208,8 +258,9 @@ export function AdminPlayerPicksEditor({
           ) : (
             <>
               <p className="text-sm text-[var(--muted)] rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
-                Edit this player&apos;s picks on their behalf. Changes are saved
-                directly to the server — they do not need to be logged in.
+                Edit this player&apos;s picks on their behalf. Press{" "}
+                <strong className="text-white">Save all picks</strong> at the
+                bottom — changes go straight to the server.
               </p>
 
               <PicksChecklist
@@ -314,19 +365,30 @@ export function AdminPlayerPicksEditor({
           className="shrink-0 border-t border-[var(--border)] bg-[var(--card)]/95 backdrop-blur-md"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
-          <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-            <p className="hidden min-w-0 flex-1 text-xs text-[var(--muted)] sm:block">
-              Group {filledGroup}/{matches.length} · Knockout {knockoutFilled}/
-              {KNOCKOUT_PICK_COUNT}
-            </p>
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="w-full sm:w-auto shrink-0 rounded-lg bg-[var(--accent)] px-6 py-3 font-semibold text-[var(--accent-foreground)] disabled:opacity-50"
-            >
-              {saving ? "Saving…" : "Save all picks"}
-            </button>
+          <div className="mx-auto max-w-3xl space-y-2 px-4 py-3">
+            {statusMessage && (
+              <p
+                className={`text-center text-sm ${
+                  statusIsError ? "text-[var(--danger)]" : "text-[var(--success)]"
+                }`}
+              >
+                {statusMessage}
+              </p>
+            )}
+            <div className="flex items-center gap-3">
+              <p className="hidden min-w-0 flex-1 text-xs text-[var(--muted)] sm:block">
+                Group {filledGroup}/{matches.length} · Knockout {knockoutFilled}/
+                {KNOCKOUT_PICK_COUNT}
+              </p>
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving || refreshing}
+                className="w-full sm:w-auto shrink-0 rounded-lg bg-[var(--accent)] px-6 py-3 font-semibold text-[var(--accent-foreground)] disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save all picks"}
+              </button>
+            </div>
           </div>
         </div>
       )}

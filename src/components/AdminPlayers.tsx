@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { AdminPlayerPicksEditor } from "@/components/AdminPlayerPicksEditor";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminPlayerPicksEditor, type AdminPlayerPicksSaveResult } from "@/components/AdminPlayerPicksEditor";
 
 type AdminPlayer = {
   id: string;
@@ -29,15 +29,21 @@ export function AdminPlayers({ password, onMessage }: Props) {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editingPlayer, setEditingPlayer] = useState<AdminPlayer | null>(null);
 
-  const headers = {
-    "Content-Type": "application/json",
-    "x-admin-password": password,
-  };
+  const headers = useMemo(
+    () => ({
+      "Content-Type": "application/json",
+      "x-admin-password": password,
+    }),
+    [password],
+  );
 
   const load = useCallback(async () => {
     if (!password) return;
     setLoading(true);
-    const res = await fetch("/api/admin/players", { headers });
+    const res = await fetch("/api/admin/players", {
+      headers,
+      cache: "no-store",
+    });
     const data = await res.json();
     setLoading(false);
     if (!res.ok) {
@@ -52,11 +58,35 @@ export function AdminPlayers({ password, onMessage }: Props) {
       names[p.id] = p.name;
     }
     setEdits(names);
-  }, [password, onMessage]);
+  }, [headers, password, onMessage]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  function applySaveResult(result: AdminPlayerPicksSaveResult) {
+    setPlayers((prev) =>
+      prev.map((p) =>
+        editingPlayer && p.id === editingPlayer.id
+          ? {
+              ...p,
+              groupPicksCount: result.groupPicksCount,
+              knockoutFilled: result.knockoutFilled,
+            }
+          : p,
+      ),
+    );
+    setEditingPlayer((prev) =>
+      prev
+        ? {
+            ...prev,
+            groupPicksCount: result.groupPicksCount,
+            knockoutFilled: result.knockoutFilled,
+          }
+        : null,
+    );
+    onMessage(result.message);
+  }
 
   async function rename(playerId: string) {
     const name = edits[playerId]?.trim();
@@ -334,10 +364,7 @@ export function AdminPlayers({ password, onMessage }: Props) {
             setEditingPlayer(null);
             load();
           }}
-          onSaved={(msg) => {
-            onMessage(msg);
-            load();
-          }}
+          onSaved={applySaveResult}
           onError={(msg) => onMessage(msg, true)}
         />
       )}
