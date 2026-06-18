@@ -20,6 +20,26 @@ type Props = {
   onMessage: (msg: string, isError?: boolean) => void;
 };
 
+function normalizePlayerName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function findDuplicateNameKeys(players: AdminPlayer[]): Set<string> {
+  const byNorm = new Map<string, number>();
+  for (const p of players) {
+    const key = normalizePlayerName(p.name);
+    if (!key) continue;
+    byNorm.set(key, (byNorm.get(key) ?? 0) + 1);
+  }
+  return new Set(
+    [...byNorm.entries()].filter(([, count]) => count > 1).map(([key]) => key),
+  );
+}
+
 export function AdminPlayers({ password, onMessage }: Props) {
   const [players, setPlayers] = useState<AdminPlayer[]>([]);
   const [locked, setLocked] = useState(false);
@@ -67,7 +87,7 @@ export function AdminPlayers({ password, onMessage }: Props) {
   function applySaveResult(result: AdminPlayerPicksSaveResult) {
     setPlayers((prev) =>
       prev.map((p) =>
-        editingPlayer && p.id === editingPlayer.id
+        p.id === result.playerId
           ? {
               ...p,
               groupPicksCount: result.groupPicksCount,
@@ -77,15 +97,16 @@ export function AdminPlayers({ password, onMessage }: Props) {
       ),
     );
     setEditingPlayer((prev) =>
-      prev
+      prev?.id === result.playerId
         ? {
             ...prev,
             groupPicksCount: result.groupPicksCount,
             knockoutFilled: result.knockoutFilled,
           }
-        : null,
+        : prev,
     );
     onMessage(result.message);
+    load();
   }
 
   async function rename(playerId: string) {
@@ -234,10 +255,13 @@ export function AdminPlayers({ password, onMessage }: Props) {
         <p className="text-sm text-[var(--muted)]">No players yet.</p>
       ) : (
         <ul className="space-y-3">
-          {players.map((p) => {
+          {(() => {
+            const duplicateKeys = findDuplicateNameKeys(players);
+            return players.map((p) => {
             const canClear =
               !locked || p.picksReopened;
             const toggling = togglingId === p.id;
+            const isDuplicate = duplicateKeys.has(normalizePlayerName(p.name));
 
             return (
             <li
@@ -281,6 +305,12 @@ export function AdminPlayers({ password, onMessage }: Props) {
                 {new Date(p.createdAt).toLocaleString("en-GB")} · Group picks{" "}
                 {p.groupPicksCount}/72 · Knockout {p.knockoutFilled}/
                 {p.knockoutTotal}
+                {isDuplicate && (
+                  <span className="text-[var(--danger)]">
+                    {" "}
+                    · Possible duplicate account — check ID before editing
+                  </span>
+                )}
                 {p.rawPicksCount > p.groupPicksCount && (
                   <span className="text-[var(--danger)]">
                     {" "}
@@ -344,7 +374,8 @@ export function AdminPlayers({ password, onMessage }: Props) {
               </div>
             </li>
             );
-          })}
+          });
+          })()}
         </ul>
       )}
 

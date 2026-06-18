@@ -48,3 +48,29 @@ export function toErrorMessage(err: unknown): string {
   }
   return "Something went wrong";
 }
+
+/** Supabase/PostgREST returns at most 1000 rows per request by default. */
+const SUPABASE_PAGE_SIZE = 1000;
+
+export async function fetchAllPaginated<T>(
+  fetchPage: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<DbResult<T[]>> {
+  try {
+    const all: T[] = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await fetchPage(from, from + SUPABASE_PAGE_SIZE - 1);
+      if (error) return { data: null, error: error.message };
+      const page = data ?? [];
+      all.push(...page);
+      if (page.length < SUPABASE_PAGE_SIZE) break;
+      from += SUPABASE_PAGE_SIZE;
+    }
+    return { data: all, error: null };
+  } catch (e) {
+    return { data: null, error: toErrorMessage(e) };
+  }
+}

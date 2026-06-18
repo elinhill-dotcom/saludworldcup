@@ -12,7 +12,7 @@ import type {
   MatchRow,
   PredictionRow,
 } from "@/lib/supabase-types";
-import { getSupabaseServer, toErrorMessage, type DbResult } from "@/lib/supabase";
+import { fetchAllPaginated, getSupabaseServer, toErrorMessage, type DbResult } from "@/lib/supabase";
 
 export type ScoreDistribution = {
   score: string;
@@ -135,13 +135,15 @@ export async function computePoolStats(): Promise<DbResult<PoolStatsPayload>> {
         .select("*")
         .eq("stage", "group")
         .order("kickoff_at", { ascending: true }),
-      supabase.from("predictions").select("*"),
+      fetchAllPaginated<PredictionRow>((from, to) =>
+        supabase.from("predictions").select("*").range(from, to),
+      ),
       supabase.from("knockout_picks").select("*"),
       computeLeaderboard(),
     ]);
 
     if (matchesRes.error) return { data: null, error: matchesRes.error.message };
-    if (predsRes.error) return { data: null, error: predsRes.error.message };
+    if (predsRes.error) return { data: null, error: predsRes.error };
     if (koPicksRes.error) return { data: null, error: koPicksRes.error.message };
     if (leaderboardRes.error || !leaderboardRes.data) {
       return { data: null, error: leaderboardRes.error ?? "Leaderboard failed" };
@@ -151,7 +153,7 @@ export async function computePoolStats(): Promise<DbResult<PoolStatsPayload>> {
     const matchMap = new Map(matches.map((m) => [m.id, m]));
 
     const predsByMatch = new Map<number, ReturnType<typeof mapPrediction>[]>();
-    for (const row of predsRes.data as PredictionRow[]) {
+    for (const row of (predsRes.data ?? []) as PredictionRow[]) {
       const p = mapPrediction(row);
       if (!matchMap.has(p.matchId)) continue;
       const list = predsByMatch.get(p.matchId) ?? [];

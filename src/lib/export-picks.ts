@@ -11,7 +11,7 @@ import type {
   PlayerRow,
   PredictionRow,
 } from "@/lib/supabase-types";
-import { getSupabaseServer, toErrorMessage, type DbResult } from "@/lib/supabase";
+import { fetchAllPaginated, getSupabaseServer, toErrorMessage, type DbResult } from "@/lib/supabase";
 
 export type ExportRow = {
   playerName: string;
@@ -32,7 +32,13 @@ export async function fetchExportData(): Promise<
 
     const [playersRes, predsRes, koRes, matchesRes] = await Promise.all([
       supabase.from("players").select("*").order("name", { ascending: true }),
-      supabase.from("predictions").select("*").in("match_id", groupRes.ids),
+      fetchAllPaginated<PredictionRow>((from, to) =>
+        supabase
+          .from("predictions")
+          .select("*")
+          .in("match_id", groupRes.ids)
+          .range(from, to),
+      ),
       supabase.from("knockout_picks").select("*"),
       supabase
         .from("matches")
@@ -42,13 +48,13 @@ export async function fetchExportData(): Promise<
     ]);
 
     if (playersRes.error) return { data: null, error: playersRes.error.message };
-    if (predsRes.error) return { data: null, error: predsRes.error.message };
+    if (predsRes.error) return { data: null, error: predsRes.error };
     if (koRes.error) return { data: null, error: koRes.error.message };
     if (matchesRes.error) return { data: null, error: matchesRes.error.message };
 
     const matches = (matchesRes.data as MatchRow[]).map(mapMatch);
     const predsByPlayer = new Map<string, Map<number, { home: number; away: number }>>();
-    for (const row of predsRes.data as PredictionRow[]) {
+    for (const row of (predsRes.data ?? []) as PredictionRow[]) {
       const p = mapPrediction(row);
       const map = predsByPlayer.get(p.playerId) ?? new Map();
       map.set(p.matchId, { home: p.homeScore, away: p.awayScore });

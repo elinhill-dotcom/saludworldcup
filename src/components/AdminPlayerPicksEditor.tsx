@@ -19,6 +19,7 @@ type PlayerInfo = {
 };
 
 export type AdminPlayerPicksSaveResult = {
+  playerId: string;
   message: string;
   groupPicksCount: number;
   knockoutFilled: number;
@@ -52,6 +53,8 @@ export function AdminPlayerPicksEditor({
   const [loadError, setLoadError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [statusIsError, setStatusIsError] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   const headers = useMemo(
     () => ({
@@ -117,6 +120,7 @@ export function AdminPlayerPicksEditor({
         } else {
           setKnockout(emptyKnockoutForm());
         }
+        setDirty(false);
       } catch {
         setLoadError("Could not load data.");
       } finally {
@@ -159,6 +163,25 @@ export function AdminPlayerPicksEditor({
   }, [matches, preds]);
 
   const knockoutFilled = countKnockoutFilled(knockout);
+
+  function markDirty() {
+    setDirty(true);
+    setStatusMessage("");
+    setStatusIsError(false);
+  }
+
+  function requestClose() {
+    if (saving || refreshing) return;
+    if (
+      dirty &&
+      !confirm(
+        "You have unsaved changes. Close without saving? (Tips are not saved automatically.)",
+      )
+    ) {
+      return;
+    }
+    onClose();
+  }
 
   async function save() {
     setSaving(true);
@@ -209,9 +232,41 @@ export function AdminPlayerPicksEditor({
 
     setStatusMessage(msg);
     setStatusIsError(false);
+    setDirty(false);
+    setLastSavedAt(Date.now());
 
-    await load(true);
+    if (Array.isArray(data.predictions)) {
+      const map: PredMap = {};
+      for (const m of matches) {
+        map[m.id] = { home: "", away: "" };
+      }
+      for (const p of data.predictions) {
+        map[p.matchId] = {
+          home: String(p.homeScore),
+          away: String(p.awayScore),
+        };
+      }
+      setPreds(map);
+    } else {
+      await load(true);
+    }
+
+    if (data.knockout) {
+      setKnockout({
+        sf1Home: data.knockout.sf1Home ?? "",
+        sf1Away: data.knockout.sf1Away ?? "",
+        sf2Home: data.knockout.sf2Home ?? "",
+        sf2Away: data.knockout.sf2Away ?? "",
+        finalHome: data.knockout.finalHome ?? "",
+        finalAway: data.knockout.finalAway ?? "",
+        bronzeHome: data.knockout.bronzeHome ?? "",
+        bronzeAway: data.knockout.bronzeAway ?? "",
+        champion: data.knockout.champion ?? "",
+      });
+    }
+
     onSaved({
+      playerId: player.id,
       message: `Saved for ${player.name}: ${groupPicksCount}/${groupTotal} group, knockout ${koFilled}/${KNOCKOUT_PICK_COUNT}.`,
       groupPicksCount,
       knockoutFilled: koFilled,
@@ -241,8 +296,9 @@ export function AdminPlayerPicksEditor({
           </div>
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--bg)]"
+            onClick={requestClose}
+            disabled={saving || refreshing}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--bg)] disabled:opacity-50"
           >
             Close
           </button>
@@ -258,9 +314,10 @@ export function AdminPlayerPicksEditor({
           ) : (
             <>
               <p className="text-sm text-[var(--muted)] rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-3">
-                Edit this player&apos;s picks on their behalf. Press{" "}
-                <strong className="text-white">Save all picks</strong> at the
-                bottom — changes go straight to the server.
+                Edit this player&apos;s <strong className="text-white">picks</strong>{" "}
+                (their bets — not the actual match results). Changes are{" "}
+                <strong className="text-white">not saved automatically</strong> — press{" "}
+                <strong className="text-white">Save all picks</strong> at the bottom.
               </p>
 
               <PicksChecklist
@@ -334,12 +391,13 @@ export function AdminPlayerPicksEditor({
                             predHome={preds[m.id]?.home ?? ""}
                             predAway={preds[m.id]?.away ?? ""}
                             locked={false}
-                            onChange={(home, away) =>
+                            onChange={(home, away) => {
+                              markDirty();
                               setPreds((prev) => ({
                                 ...prev,
                                 [m.id]: { home, away },
-                              }))
-                            }
+                              }));
+                            }}
                           />
                         ))}
                       </div>
@@ -352,7 +410,10 @@ export function AdminPlayerPicksEditor({
                 <KnockoutPickForm
                   form={knockout}
                   locked={false}
-                  onChange={setKnockout}
+                  onChange={(next) => {
+                    markDirty();
+                    setKnockout(next);
+                  }}
                 />
               )}
             </>
@@ -373,6 +434,16 @@ export function AdminPlayerPicksEditor({
                 }`}
               >
                 {statusMessage}
+              </p>
+            )}
+            {dirty && !saving && (
+              <p className="text-center text-xs text-[var(--danger)]">
+                Unsaved changes — press Save all picks before closing.
+              </p>
+            )}
+            {lastSavedAt && !dirty && !saving && (
+              <p className="text-center text-xs text-[var(--muted)]">
+                Last saved {new Date(lastSavedAt).toLocaleTimeString("en-GB")}
               </p>
             )}
             <div className="flex items-center gap-3">

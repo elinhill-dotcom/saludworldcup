@@ -96,12 +96,22 @@ export async function saveGroupPredictions(
       };
     }
 
+    let upsertedCount = 0;
     if (rows.length > 0) {
-      const { error } = await supabase
+      const { data: upserted, error } = await supabase
         .from("predictions")
-        .upsert(rows, { onConflict: "player_id,match_id" });
+        .upsert(rows, { onConflict: "player_id,match_id" })
+        .select("match_id");
 
       if (error) return { data: null, error: error.message };
+      upsertedCount = upserted?.length ?? 0;
+      if (upsertedCount === 0) {
+        return {
+          data: null,
+          error:
+            "Save failed — the server did not store any scores. Try again or contact Elin.",
+        };
+      }
     }
 
     const { count, error: countErr } = await supabase
@@ -125,7 +135,7 @@ export async function saveGroupPredictions(
       data: {
         savedCount,
         submittedCount,
-        writtenCount: rows.length,
+        writtenCount: upsertedCount || rows.length,
       },
       error: null,
     };

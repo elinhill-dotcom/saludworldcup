@@ -16,7 +16,7 @@ import type {
   PlayerRow,
   PredictionRow,
 } from "@/lib/supabase-types";
-import { getSupabaseBrowser, getSupabaseServer, toErrorMessage, type DbResult } from "@/lib/supabase";
+import { fetchAllPaginated, getSupabaseBrowser, getSupabaseServer, toErrorMessage, type DbResult } from "@/lib/supabase";
 
 export type LeaderboardEntry = {
   playerId: string;
@@ -43,23 +43,27 @@ export async function computeLeaderboard(
     const [playersRes, predsRes, koPicksRes, koAnswerRes, matchesRes] =
       await Promise.all([
         supabase.from("players").select("*").order("name", { ascending: true }),
-        supabase.from("predictions").select("*"),
+        fetchAllPaginated<PredictionRow>((from, to) =>
+          supabase.from("predictions").select("*").range(from, to),
+        ),
         supabase.from("knockout_picks").select("*"),
         supabase.from("knockout_answer").select("*").eq("id", 1).maybeSingle(),
         supabase.from("matches").select("*"),
       ]);
 
     if (playersRes.error) return { data: null, error: playersRes.error.message };
-    if (predsRes.error) return { data: null, error: predsRes.error.message };
+    if (predsRes.error) return { data: null, error: predsRes.error };
     if (koPicksRes.error) return { data: null, error: koPicksRes.error.message };
     if (matchesRes.error) return { data: null, error: matchesRes.error.message };
+
+    const predsData = predsRes.data ?? [];
 
     const matchMap = new Map(
       (matchesRes.data as MatchRow[]).map((m) => [m.id, mapMatch(m)]),
     );
 
     const predsByPlayer = new Map<string, ReturnType<typeof mapPrediction>[]>();
-    for (const row of predsRes.data as PredictionRow[]) {
+    for (const row of predsData) {
       const p = mapPrediction(row);
       const list = predsByPlayer.get(p.playerId) ?? [];
       list.push(p);

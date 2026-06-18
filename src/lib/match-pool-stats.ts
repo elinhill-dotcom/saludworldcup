@@ -3,6 +3,7 @@ import { getOutcome } from "@/lib/scoring";
 import { mapMatch, mapPrediction } from "@/lib/supabase-mappers";
 import type { MatchRow, PredictionRow } from "@/lib/supabase-types";
 import {
+  fetchAllPaginated,
   getSupabaseServer,
   toErrorMessage,
   type DbResult,
@@ -93,17 +94,19 @@ export async function fetchMatchPoolStatsMap(): Promise<
         .select("*")
         .eq("stage", "group")
         .order("kickoff_at", { ascending: true }),
-      supabase.from("predictions").select("*"),
+      fetchAllPaginated<PredictionRow>((from, to) =>
+        supabase.from("predictions").select("*").range(from, to),
+      ),
     ]);
 
     if (matchesRes.error) return { data: null, error: matchesRes.error.message };
-    if (predsRes.error) return { data: null, error: predsRes.error.message };
+    if (predsRes.error) return { data: null, error: predsRes.error };
 
     const matches = (matchesRes.data as MatchRow[]).map(mapMatch);
     const matchIds = new Set(matches.map((m) => m.id));
 
     const predsByMatch = new Map<number, ReturnType<typeof mapPrediction>[]>();
-    for (const row of predsRes.data as PredictionRow[]) {
+    for (const row of (predsRes.data ?? []) as PredictionRow[]) {
       const p = mapPrediction(row);
       if (!matchIds.has(p.matchId)) continue;
       const list = predsByMatch.get(p.matchId) ?? [];

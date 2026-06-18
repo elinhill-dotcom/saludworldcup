@@ -146,15 +146,46 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const reloadRes = await loadGroupPredictions(playerId);
+  if (reloadRes.error) {
+    return NextResponse.json({ error: reloadRes.error }, { status: 500 });
+  }
+
+  const reloaded = reloadRes.data ?? [];
+  const reloadedIds = new Set(reloaded.map((p) => p.matchId));
+  const groupIds = new Set(groupRes2.ids);
+  const submittedIds = items
+    .filter(
+      (item) =>
+        groupIds.has(item.matchId) &&
+        Number.isInteger(item.homeScore) &&
+        Number.isInteger(item.awayScore) &&
+        item.homeScore >= 0 &&
+        item.awayScore >= 0,
+    )
+    .map((item) => item.matchId);
+
+  const missingAfterReload = submittedIds.filter((id) => !reloadedIds.has(id));
+  if (missingAfterReload.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Save verification failed — ${missingAfterReload.length} score(s) did not persist on the server.`,
+      },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     ok: true,
+    playerId,
     savedCount: groupRes.data.savedCount,
     submittedCount: groupRes.data.submittedCount,
     writtenCount: groupRes.data.writtenCount,
-    groupPicksCount: groupRes.data.savedCount,
+    groupPicksCount: reloaded.length,
     groupTotal,
     knockoutFilled,
     knockoutTotal: KNOCKOUT_PICK_COUNT,
     knockout: koRes.data,
+    predictions: reloaded,
   });
 }

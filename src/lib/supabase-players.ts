@@ -8,6 +8,7 @@ import {
   verifyPassword,
 } from "@/lib/player-password";
 import {
+  fetchAllPaginated,
   getSupabaseBrowser,
   getSupabaseServer,
   toErrorMessage,
@@ -226,12 +227,17 @@ export async function fetchAdminPlayers(): Promise<
     const supabase = getSupabaseServer();
     const [playersRes, predsRes, koRes] = await Promise.all([
       supabase.from("players").select("*").order("created_at", { ascending: false }),
-      supabase.from("predictions").select("player_id, match_id"),
+      fetchAllPaginated<{ player_id: string; match_id: number }>((from, to) =>
+        supabase
+          .from("predictions")
+          .select("player_id, match_id")
+          .range(from, to),
+      ),
       supabase.from("knockout_picks").select("*"),
     ]);
 
     if (playersRes.error) return { data: null, error: playersRes.error.message };
-    if (predsRes.error) return { data: null, error: predsRes.error.message };
+    if (predsRes.error) return { data: null, error: predsRes.error };
     if (koRes.error) return { data: null, error: koRes.error.message };
 
     const groupRes = await fetchGroupMatchIds(supabase);
