@@ -104,22 +104,22 @@ export const MATCHES: MatchSeed[] = [
   { id: 70, dayLabel: enDayLabel("2026-06-28"), date: "2026-06-28", time: "01:30", homeTeam: "DR Kongo", awayTeam: "Uzbekistan", groupCode: "K", stage: "group", broadcaster: "TV4" },
   { id: 71, dayLabel: enDayLabel("2026-06-28"), date: "2026-06-28", time: "04:00", homeTeam: "Algeriet", awayTeam: "Österrike", groupCode: "J", stage: "group", broadcaster: "TV4" },
   { id: 72, dayLabel: enDayLabel("2026-06-28"), date: "2026-06-28", time: "04:00", homeTeam: "Jordanien", awayTeam: "Argentina", groupCode: "J", stage: "group", broadcaster: "TV4" },
-  { id: 73, matchNumber: 65, dayLabel: enDayLabel("2026-06-28"), date: "2026-06-28", time: "21:00", homeTeam: "2A", awayTeam: "2B", stage: "r16", broadcaster: "TV4" },
-  { id: 74, matchNumber: 66, dayLabel: enDayLabel("2026-06-29"), date: "2026-06-29", time: "19:00", homeTeam: "1C", awayTeam: "2F", stage: "r16", broadcaster: "TV4" },
-  { id: 75, matchNumber: 67, dayLabel: enDayLabel("2026-06-29"), date: "2026-06-29", time: "22:30", homeTeam: "1E", awayTeam: "3A/B/C/D/F", stage: "r16", broadcaster: "SVT" },
-  { id: 76, matchNumber: 68, dayLabel: enDayLabel("2026-06-30"), date: "2026-06-30", time: "03:00", homeTeam: "1F", awayTeam: "2C", stage: "r16", broadcaster: "SVT" },
-  { id: 77, matchNumber: 69, dayLabel: enDayLabel("2026-06-30"), date: "2026-06-30", time: "19:00", homeTeam: "2E", awayTeam: "2I", stage: "r16", broadcaster: "TV4" },
-  { id: 78, matchNumber: 70, dayLabel: enDayLabel("2026-06-30"), date: "2026-06-30", time: "23:00", homeTeam: "1I", awayTeam: "3C/D/F/G/H", stage: "r16", broadcaster: "TV4" },
-  { id: 79, matchNumber: 71, dayLabel: enDayLabel("2026-07-01"), date: "2026-07-01", time: "03:00", homeTeam: "1A", awayTeam: "3C/E/F/H/I", stage: "r16", broadcaster: "TV4" },
-  { id: 80, matchNumber: 72, dayLabel: enDayLabel("2026-07-01"), date: "2026-07-01", time: "18:00", homeTeam: "1L", awayTeam: "3E/H/I/J/K", stage: "r16", broadcaster: "SVT" },
-  { id: 81, matchNumber: 73, dayLabel: enDayLabel("2026-07-01"), date: "2026-07-01", time: "22:00", homeTeam: "1G", awayTeam: "3A/E/H/I/J", stage: "r16", broadcaster: "TV4" },
-  { id: 82, matchNumber: 74, dayLabel: enDayLabel("2026-07-02"), date: "2026-07-02", time: "02:00", homeTeam: "1D", awayTeam: "3B/E/F/I/J", stage: "r16", broadcaster: "TV4" },
-  { id: 83, matchNumber: 75, dayLabel: enDayLabel("2026-07-02"), date: "2026-07-02", time: "21:00", homeTeam: "1H", awayTeam: "2J", stage: "r16", broadcaster: "SVT" },
-  { id: 84, matchNumber: 76, dayLabel: enDayLabel("2026-07-03"), date: "2026-07-03", time: "01:00", homeTeam: "2K", awayTeam: "2L", stage: "r16", broadcaster: "TV4" },
-  { id: 85, matchNumber: 77, dayLabel: enDayLabel("2026-07-03"), date: "2026-07-03", time: "05:00", homeTeam: "1B", awayTeam: "3E/F/G/I/J", stage: "r16", broadcaster: "TV4" },
-  { id: 86, matchNumber: 78, dayLabel: enDayLabel("2026-07-03"), date: "2026-07-03", time: "20:00", homeTeam: "2D", awayTeam: "2G", stage: "r16", broadcaster: "TV4" },
-  { id: 87, matchNumber: 79, dayLabel: enDayLabel("2026-07-04"), date: "2026-07-04", time: "00:00", homeTeam: "1J", awayTeam: "2H", stage: "r16", broadcaster: "TV4" },
-  { id: 88, matchNumber: 80, dayLabel: enDayLabel("2026-07-04"), date: "2026-07-04", time: "03:30", homeTeam: "1K", awayTeam: "3D/E/I/J/L", stage: "r16", broadcaster: "SVT" },
+  { id: 73, matchNumber: 65, dayLabel: enDayLabel("2026-06-28"), date: "2026-06-28", time: "21:00", homeTeam: "Sydafrika", awayTeam: "Kanada", stage: "r16", broadcaster: "TV4" },
+  { id: 74, matchNumber: 66, dayLabel: enDayLabel("2026-06-29"), date: "2026-06-29", time: "22:30", homeTeam: "Tyskland", awayTeam: "Paraguay", stage: "r16", broadcaster: "SVT" },
+  { id: 75, matchNumber: 67, dayLabel: enDayLabel("2026-06-30"), date: "2026-06-30", time: "03:00", homeTeam: "Nederländerna", awayTeam: "Marocko", stage: "r16", broadcaster: "SVT" },
+  { id: 76, matchNumber: 68, dayLabel: enDayLabel("2026-06-29"), date: "2026-06-29", time: "19:00", homeTeam: "Brasilien", awayTeam: "Japan", stage: "r16", broadcaster: "TV4" },
+  { id: 77, matchNumber: 69, dayLabel: enDayLabel("2026-06-30"), date: "2026-06-30", time: "23:00", homeTeam: "Frankrike", awayTeam: "Sverige", stage: "r16", broadcaster: "TV4" },
+  { id: 78, matchNumber: 70, dayLabel: enDayLabel("2026-06-30"), date: "2026-06-30", time: "19:00", homeTeam: "Elfenbenskusten", awayTeam: "Norge", stage: "r16", broadcaster: "TV4" },
+  { id: 79, matchNumber: 71, dayLabel: enDayLabel("2026-07-01"), date: "2026-07-01", time: "03:00", homeTeam: "Mexiko", awayTeam: "Ecuador", stage: "r16", broadcaster: "TV4" },
+  { id: 80, matchNumber: 72, dayLabel: enDayLabel("2026-07-01"), date: "2026-07-01", time: "18:00", homeTeam: "England", awayTeam: "DR Kongo", stage: "r16", broadcaster: "SVT" },
+  { id: 81, matchNumber: 73, dayLabel: enDayLabel("2026-07-02"), date: "2026-07-02", time: "02:00", homeTeam: "USA", awayTeam: "Bosnien och Hercegovina", stage: "r16", broadcaster: "TV4" },
+  { id: 82, matchNumber: 74, dayLabel: enDayLabel("2026-07-01"), date: "2026-07-01", time: "22:00", homeTeam: "Belgien", awayTeam: "Senegal", stage: "r16", broadcaster: "TV4" },
+  { id: 83, matchNumber: 75, dayLabel: enDayLabel("2026-07-03"), date: "2026-07-03", time: "01:00", homeTeam: "Portugal", awayTeam: "Kroatien", stage: "r16", broadcaster: "SVT" },
+  { id: 84, matchNumber: 76, dayLabel: enDayLabel("2026-07-02"), date: "2026-07-02", time: "21:00", homeTeam: "Spanien", awayTeam: "Österrike", stage: "r16", broadcaster: "SVT" },
+  { id: 85, matchNumber: 77, dayLabel: enDayLabel("2026-07-03"), date: "2026-07-03", time: "05:00", homeTeam: "Schweiz", awayTeam: "Algeriet", stage: "r16", broadcaster: "TV4" },
+  { id: 86, matchNumber: 78, dayLabel: enDayLabel("2026-07-04"), date: "2026-07-04", time: "00:00", homeTeam: "Argentina", awayTeam: "Kap Verde", stage: "r16", broadcaster: "TV4" },
+  { id: 87, matchNumber: 79, dayLabel: enDayLabel("2026-07-04"), date: "2026-07-04", time: "03:30", homeTeam: "Colombia", awayTeam: "Ghana", stage: "r16", broadcaster: "SVT" },
+  { id: 88, matchNumber: 80, dayLabel: enDayLabel("2026-07-03"), date: "2026-07-03", time: "20:00", homeTeam: "Australien", awayTeam: "Egypten", stage: "r16", broadcaster: "TV4" },
   { id: 89, matchNumber: 81, dayLabel: enDayLabel("2026-07-04"), date: "2026-07-04", time: "19:00", homeTeam: "Winner M73", awayTeam: "Winner M75", stage: "r8", broadcaster: "TV4" },
   { id: 90, matchNumber: 82, dayLabel: enDayLabel("2026-07-04"), date: "2026-07-04", time: "23:00", homeTeam: "Winner M74", awayTeam: "Winner M77", stage: "r8", broadcaster: "SVT" },
   { id: 91, matchNumber: 83, dayLabel: enDayLabel("2026-07-05"), date: "2026-07-05", time: "22:00", homeTeam: "Winner M76", awayTeam: "Winner M78", stage: "r8", broadcaster: "TV4" },
@@ -134,8 +134,8 @@ export const MATCHES: MatchSeed[] = [
   { id: 100, matchNumber: 92, dayLabel: enDayLabel("2026-07-12"), date: "2026-07-12", time: "03:00", homeTeam: "Winner M95", awayTeam: "Winner M96", stage: "qf", broadcaster: "SVT" },
   { id: 101, matchNumber: 93, dayLabel: enDayLabel("2026-07-14"), date: "2026-07-14", time: "21:00", homeTeam: "Winner M97", awayTeam: "Winner M98", stage: "sf", broadcaster: "SVT" },
   { id: 102, matchNumber: 94, dayLabel: enDayLabel("2026-07-15"), date: "2026-07-15", time: "21:00", homeTeam: "Winner M99", awayTeam: "Winner M100", stage: "sf", broadcaster: "TV4" },
-  { id: 103, matchNumber: 95, dayLabel: enDayLabel("2026-07-18"), date: "2026-07-18", time: "23:00", homeTeam: "Loser M93", awayTeam: "Loser M94", stage: "bronze", broadcaster: "SVT" },
-  { id: 104, matchNumber: 96, dayLabel: enDayLabel("2026-07-19"), date: "2026-07-19", time: "21:00", homeTeam: "Winner M93", awayTeam: "Winner M94", stage: "final", broadcaster: "TV4" },
+  { id: 103, matchNumber: 95, dayLabel: enDayLabel("2026-07-18"), date: "2026-07-18", time: "23:00", homeTeam: "Loser M101", awayTeam: "Loser M102", stage: "bronze", broadcaster: "SVT" },
+  { id: 104, matchNumber: 96, dayLabel: enDayLabel("2026-07-19"), date: "2026-07-19", time: "21:00", homeTeam: "Winner M101", awayTeam: "Winner M102", stage: "final", broadcaster: "TV4" },
 ];
 
 export function kickoffIso(date: string, time: string): string {
@@ -147,6 +147,9 @@ export function kickoffIso(date: string, time: string): string {
 export const JAR_CONTRIBUTION_EUR = 10;
 
 export const GROUP_MATCH_IDS = MATCHES.filter((m) => m.stage === "group").map(
+  (m) => m.id,
+);
+export const KNOCKOUT_MATCH_IDS = MATCHES.filter((m) => m.stage !== "group").map(
   (m) => m.id,
 );
 export const POINTS_EXACT = 3;

@@ -41,29 +41,32 @@ function teamsInBronze(answer: KnockoutPickData): string[] {
     .map(norm);
 }
 
-function pickedSemifinalists(pick: KnockoutPickData): string[] {
-  return [pick.sf1Home, pick.sf1Away, pick.sf2Home, pick.sf2Away]
-    .filter((t): t is string => !!t)
-    .map(norm);
+function uniqueTeams(teams: (string | null | undefined)[]): string[] {
+  return [...new Set(teams.filter((t): t is string => !!t).map(norm))];
 }
 
 export function scoreKnockoutPick(
   pick: KnockoutPickData,
   answer: KnockoutPickData,
 ): number {
-  if (!answer.champion) return 0;
-
   let points = 0;
   const actualSF = new Set(teamsInSemis(answer));
-  for (const t of pickedSemifinalists(pick)) {
-    if (actualSF.has(t)) points += KNOCKOUT_POINTS.semifinalist;
+  if (actualSF.size > 0) {
+    for (const t of uniqueTeams([
+      pick.sf1Home,
+      pick.sf1Away,
+      pick.sf2Home,
+      pick.sf2Away,
+    ])) {
+      if (actualSF.has(t)) points += KNOCKOUT_POINTS.semifinalist;
+    }
   }
 
   const actualFinal = new Set(teamsInFinal(answer));
-  for (const t of [pick.finalHome, pick.finalAway]
-    .filter((x): x is string => !!x)
-    .map(norm)) {
-    if (actualFinal.has(t)) points += KNOCKOUT_POINTS.finalist;
+  if (actualFinal.size > 0) {
+    for (const t of uniqueTeams([pick.finalHome, pick.finalAway])) {
+      if (actualFinal.has(t)) points += KNOCKOUT_POINTS.finalist;
+    }
   }
 
   if (
@@ -75,11 +78,41 @@ export function scoreKnockoutPick(
   }
 
   const actualBronze = new Set(teamsInBronze(answer));
-  for (const t of [pick.bronzeHome, pick.bronzeAway]
-    .filter((x): x is string => !!x)
-    .map(norm)) {
-    if (actualBronze.has(t)) points += KNOCKOUT_POINTS.bronzeTeam;
+  if (actualBronze.size > 0) {
+    for (const t of uniqueTeams([pick.bronzeHome, pick.bronzeAway])) {
+      if (actualBronze.has(t)) points += KNOCKOUT_POINTS.bronzeTeam;
+    }
   }
 
   return points;
+}
+
+/** Max knockout points still possible given eliminated teams. */
+export function remainingKnockoutPotential(
+  pick: KnockoutPickData,
+  eliminated: Set<string>,
+): number {
+  let remaining = 0;
+  for (const t of uniqueTeams([
+    pick.sf1Home,
+    pick.sf1Away,
+    pick.sf2Home,
+    pick.sf2Away,
+  ])) {
+    if (!eliminated.has(t)) remaining += KNOCKOUT_POINTS.semifinalist;
+  }
+  for (const t of uniqueTeams([pick.finalHome, pick.finalAway])) {
+    if (!eliminated.has(t)) remaining += KNOCKOUT_POINTS.finalist;
+  }
+  if (pick.champion && !eliminated.has(norm(pick.champion))) {
+    remaining += KNOCKOUT_POINTS.champion;
+  }
+  for (const t of uniqueTeams([pick.bronzeHome, pick.bronzeAway])) {
+    if (!eliminated.has(t)) remaining += KNOCKOUT_POINTS.bronzeTeam;
+  }
+  return remaining;
+}
+
+export function maxKnockoutPotential(pick: KnockoutPickData): number {
+  return remainingKnockoutPotential(pick, new Set());
 }

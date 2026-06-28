@@ -55,7 +55,8 @@ export function KnockoutPickForm({ form, locked, onChange }: Props) {
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-4">
         <h3 className="font-semibold">Semifinals (4 picks)</h3>
         <p className="text-xs text-[var(--muted)]">
-          Who plays each semifinal? Pick all four teams.
+          Pick the four semifinalists — it does not matter which two meet in
+          which match. You get 2 points per correct team.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <TeamSelect
@@ -88,7 +89,8 @@ export function KnockoutPickForm({ form, locked, onChange }: Props) {
       <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--featured)] p-5 space-y-4">
         <h3 className="font-semibold">Final (3 picks)</h3>
         <p className="text-xs text-[var(--muted)]">
-          Which two teams meet in the final, and who wins the World Cup?
+          Pick the two finalists and the winner. Pairing does not matter — 3
+          points per correct finalist, 5 for the champion.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <TeamSelect
@@ -117,7 +119,8 @@ export function KnockoutPickForm({ form, locked, onChange }: Props) {
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 space-y-4">
         <h3 className="font-semibold">Bronze match (2 picks)</h3>
         <p className="text-xs text-[var(--muted)]">
-          Who plays for third place?
+          Pick the two bronze teams — pairing does not matter. 2 points per
+          correct team.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <TeamSelect

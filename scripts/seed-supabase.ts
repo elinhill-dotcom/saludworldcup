@@ -4,9 +4,13 @@
  * Run: npx tsx scripts/seed-supabase.ts
  */
 import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
 import { isFeaturedMatch } from "../src/lib/teams";
 import { toEnglishTeam } from "../src/lib/team-names";
 import { kickoffIso, MATCHES } from "../src/lib/matches-data";
+
+config({ path: ".env.local" });
+config({ path: ".env" });
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

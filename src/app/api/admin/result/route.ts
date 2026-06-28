@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminPassword } from "@/lib/config";
-import { GROUP_MATCH_IDS } from "@/lib/matches-data";
+import { GROUP_MATCH_IDS, KNOCKOUT_MATCH_IDS } from "@/lib/matches-data";
 import { resetMatchResult, updateMatchResult } from "@/lib/supabase-matches";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
-const validGroupIds = new Set(GROUP_MATCH_IDS);
+const validMatchIds = new Set([...GROUP_MATCH_IDS, ...KNOCKOUT_MATCH_IDS]);
 
 export async function POST(req: NextRequest) {
   const password = req.headers.get("x-admin-password") ?? "";
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const finished = body.finished !== false;
 
   if (
-    !validGroupIds.has(matchId) ||
+    !validMatchIds.has(matchId) ||
     !Number.isInteger(homeScore) ||
     !Number.isInteger(awayScore) ||
     homeScore < 0 ||
@@ -60,7 +60,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   const matchId = Number(req.nextUrl.searchParams.get("matchId"));
-  if (!validGroupIds.has(matchId)) {
+  if (!validMatchIds.has(matchId)) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
 

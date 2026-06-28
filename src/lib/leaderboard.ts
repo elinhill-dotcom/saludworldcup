@@ -2,6 +2,11 @@ import { JAR_CONTRIBUTION_EUR } from "@/lib/matches-data";
 import { fetchGroupMatchIds } from "@/lib/group-match-ids";
 import { countKnockoutFilled, KNOCKOUT_PICK_COUNT } from "@/lib/knockout-picks";
 import { scoreKnockoutPick } from "@/lib/knockout-scoring";
+import {
+  deriveKnockoutAnswerFromMatches,
+  mergeKnockoutAnswers,
+  resolveKnockoutBracket,
+} from "@/lib/knockout-bracket";
 import { pointsForPrediction } from "@/lib/scoring";
 import {
   mapKnockoutAnswer,
@@ -77,8 +82,25 @@ export async function computeLeaderboard(
 
     const answerRow = koAnswerRes.data as KnockoutAnswerRow | null;
     const mappedAnswer = answerRow ? mapKnockoutAnswer(answerRow) : null;
-    const answer =
-      mappedAnswer?.set && mappedAnswer.champion ? mappedAnswer : null;
+    const manual =
+      mappedAnswer?.set
+        ? {
+            sf1Home: mappedAnswer.sf1Home || null,
+            sf1Away: mappedAnswer.sf1Away || null,
+            sf2Home: mappedAnswer.sf2Home || null,
+            sf2Away: mappedAnswer.sf2Away || null,
+            finalHome: mappedAnswer.finalHome || null,
+            finalAway: mappedAnswer.finalAway || null,
+            bronzeHome: mappedAnswer.bronzeHome || null,
+            bronzeAway: mappedAnswer.bronzeAway || null,
+            champion: mappedAnswer.champion || null,
+          }
+        : null;
+
+    const knockoutMatches = [...matchMap.values()].filter((m) => m.id >= 73);
+    const resolved = resolveKnockoutBracket(knockoutMatches);
+    const derived = deriveKnockoutAnswerFromMatches(resolved);
+    const answer = mergeKnockoutAnswers(manual, derived);
 
     const groupRes = await fetchGroupMatchIds(supabase);
     if (groupRes.error) return { data: null, error: groupRes.error };
@@ -114,7 +136,7 @@ export async function computeLeaderboard(
         let knockoutPoints = 0;
         const ko = koByPlayer.get(row.id);
         const knockoutFilled = ko ? countKnockoutFilled(ko) : 0;
-        if (answer && ko) {
+        if (ko) {
           knockoutPoints = scoreKnockoutPick(ko, answer);
         }
 

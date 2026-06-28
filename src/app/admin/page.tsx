@@ -27,11 +27,14 @@ export default function AdminPage() {
   const [pwInput, setPwInput] = useState("");
 
   const [matches, setMatches] = useState<MatchView[]>([]);
+  const [knockoutMatches, setKnockoutMatches] = useState<MatchView[]>([]);
   const [knockout, setKnockout] = useState<KnockoutFormState>(
     emptyKnockoutForm(),
   );
   const [filter, setFilter] = useState<"open" | "all">("open");
-  const [tab, setTab] = useState<"group" | "knockout" | "players" | "export">("group");
+  const [tab, setTab] = useState<
+    "group" | "knockout" | "knockout-matches" | "players" | "export"
+  >("group");
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
 
@@ -63,6 +66,13 @@ export default function AdminPage() {
     fetch("/api/matches?stage=group")
       .then((r) => r.json())
       .then((d) => setMatches(d.matches ?? []));
+    fetch("/api/matches")
+      .then((r) => r.json())
+      .then((d) =>
+        setKnockoutMatches(
+          (d.matches ?? []).filter((m: MatchView) => m.id >= 73),
+        ),
+      );
     fetch("/api/admin/knockout", {
       headers: { "x-admin-password": password },
     })
@@ -109,6 +119,18 @@ export default function AdminPage() {
   const shown = matches.filter((m) =>
     filter === "open" ? !m.finished : true,
   );
+  const shownKnockout = knockoutMatches.filter((m) =>
+    filter === "open" ? !m.finished : true,
+  );
+
+  function applyMatchUpdate(matchId: number, updated: MatchView) {
+    setMatches((prev) =>
+      prev.map((m) => (m.id === matchId ? { ...m, ...updated } : m)),
+    );
+    setKnockoutMatches((prev) =>
+      prev.map((m) => (m.id === matchId ? { ...m, ...updated } : m)),
+    );
+  }
 
   async function saveResult(
     matchId: number,
@@ -129,9 +151,7 @@ export default function AdminPage() {
       showMessage(data.error ?? "Save failed", true);
       return;
     }
-    setMatches((prev) =>
-      prev.map((m) => (m.id === matchId ? { ...m, ...data.match } : m)),
-    );
+    applyMatchUpdate(matchId, data.match);
     showMessage(`Result saved for match #${matchId}`);
   }
 
@@ -153,9 +173,7 @@ export default function AdminPage() {
       showMessage(data.error ?? "Reset failed", true);
       return;
     }
-    setMatches((prev) =>
-      prev.map((m) => (m.id === matchId ? { ...m, ...data.match } : m)),
-    );
+    applyMatchUpdate(matchId, data.match);
     showMessage(`Result reset for match #${matchId}`);
   }
 
@@ -281,6 +299,17 @@ export default function AdminPage() {
         </button>
         <button
           type="button"
+          onClick={() => setTab("knockout-matches")}
+          className={`rounded-lg px-3 py-1.5 text-sm ${
+            tab === "knockout-matches"
+              ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
+              : "bg-[var(--card)]"
+          }`}
+        >
+          Knockout results
+        </button>
+        <button
+          type="button"
           onClick={() => setTab("knockout")}
           className={`rounded-lg px-3 py-1.5 text-sm ${
             tab === "knockout"
@@ -329,6 +358,49 @@ export default function AdminPage() {
 
           <div className="space-y-4">
             {shown.map((m) => (
+              <AdminMatchRow
+                key={m.id}
+                match={m}
+                onSave={saveResult}
+                onReset={resetResult}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {tab === "knockout-matches" && (
+        <>
+          <p className="text-sm text-[var(--muted)]">
+            Enter knockout match results as they finish — the bracket and
+            knockout points update automatically.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setFilter("open")}
+              className={`rounded-lg px-3 py-1.5 text-sm ${
+                filter === "open"
+                  ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
+                  : "bg-[var(--card)]"
+              }`}
+            >
+              Not finished
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter("all")}
+              className={`rounded-lg px-3 py-1.5 text-sm ${
+                filter === "all"
+                  ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
+                  : "bg-[var(--card)]"
+              }`}
+            >
+              All
+            </button>
+          </div>
+          <div className="space-y-4">
+            {shownKnockout.map((m) => (
               <AdminMatchRow
                 key={m.id}
                 match={m}

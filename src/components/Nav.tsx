@@ -9,6 +9,7 @@ const baseLinks = [
   { href: "/picks", label: "My picks" },
   { href: "/scoreboard", label: "Scoreboard" },
   { href: "/results", label: "Results" },
+  { href: "/knockout", label: "Knockout" },
   { href: "/live", label: "Live chat" },
 ] as const;
 
@@ -64,7 +65,9 @@ export function Nav() {
           const active =
             l.href === "/live"
               ? pathname.startsWith("/live")
-              : pathname === l.href;
+              : l.href === "/knockout"
+                ? pathname.startsWith("/knockout")
+                : pathname === l.href;
           const isLiveLink = l.href === "/live";
           const showDot = isLiveLink && liveCount > 0;
 
