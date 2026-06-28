@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:seed": "tsx scripts/seed-supabase.ts"
+    "db:seed": "tsx --env-file=.env.local --env-file=.env scripts/seed-supabase.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
