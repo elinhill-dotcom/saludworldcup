@@ -19,9 +19,36 @@ if (!url || !key) {
 const supabase = createClient(url, key);
 
 async function main() {
+  const existing = await supabase
+    .from("matches")
+    .select("id, home_score, away_score, finished");
+
+  if (existing.error) {
+    console.error("Failed to read existing matches:", existing.error.message);
+    process.exit(1);
+  }
+
+  const existingById = new Map<
+    number,
+    { home_score: number | null; away_score: number | null; finished: boolean }
+  >(
+    (existing.data ?? []).map((r) => [
+      r.id as number,
+      {
+        home_score: (r.home_score as number | null) ?? null,
+        away_score: (r.away_score as number | null) ?? null,
+        finished: !!r.finished,
+      },
+    ]),
+  );
+
   const rows = MATCHES.map((m) => {
     const homeTeam = toEnglishTeam(m.homeTeam);
     const awayTeam = toEnglishTeam(m.awayTeam);
+    const prev = existingById.get(m.id);
+    const keepResult =
+      !!prev &&
+      (prev.finished || prev.home_score !== null || prev.away_score !== null);
     return {
       id: m.id,
       match_number: m.matchNumber ?? null,
@@ -33,9 +60,9 @@ async function main() {
       stage: m.stage,
       broadcaster: m.broadcaster ?? null,
       featured: isFeaturedMatch(homeTeam, awayTeam),
-      home_score: null,
-      away_score: null,
-      finished: false,
+      home_score: keepResult ? prev.home_score : null,
+      away_score: keepResult ? prev.away_score : null,
+      finished: keepResult ? prev.finished : false,
     };
   });
 
