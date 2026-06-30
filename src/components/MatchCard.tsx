@@ -18,6 +18,8 @@ export type MatchView = {
   homeScore: number | null;
   awayScore: number | null;
   finished: boolean;
+  /** Set when knockout match is level after 90 min (won on ET/penalties). */
+  winnerTeam: string | null;
 };
 
 type Props = {

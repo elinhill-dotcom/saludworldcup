@@ -75,6 +75,7 @@ export async function updateMatchResult(
   homeScore: number,
   awayScore: number,
   finished = true,
+  winnerTeam: string | null = null,
 ): Promise<DbResult<ReturnType<typeof mapMatch>>> {
   try {
     const supabase = getSupabaseServer();
@@ -84,6 +85,7 @@ export async function updateMatchResult(
         home_score: homeScore,
         away_score: awayScore,
         finished,
+        winner_team: winnerTeam,
       })
       .eq("id", matchId)
       .select()
@@ -107,6 +109,7 @@ export async function resetMatchResult(
         home_score: null,
         away_score: null,
         finished: false,
+        winner_team: null,
       })
       .eq("id", matchId)
       .select()

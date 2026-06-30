@@ -23,7 +23,8 @@ create table if not exists matches (
   featured boolean not null default false,
   home_score int,
   away_score int,
-  finished boolean not null default false
+  finished boolean not null default false,
+  winner_team text
 );
 
 create table if not exists predictions (

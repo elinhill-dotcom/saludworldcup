@@ -101,7 +101,7 @@ export default function ScoreboardPage() {
                       Knockout
                     </th>
                     <th className="px-4 py-3 text-right hidden md:table-cell">
-                      Exact
+                      Exact hits
                     </th>
                   </tr>
                 </thead>
@@ -161,7 +161,13 @@ export default function ScoreboardPage() {
             </div>
           )}
 
-          <div className="mt-3">
+          <div className="mt-3 space-y-1">
+            <p className="text-xs text-[var(--muted)]">
+              Group scoring: <strong className="text-white">3 pts</strong> per
+              exact score, <strong className="text-white">1 pt</strong> per
+              correct outcome (win/draw). The &quot;Exact hits&quot; column is a
+              count, not points.
+            </p>
             <PrizeSplit
               jarEur={jarContributionEur}
               showEntry={false}

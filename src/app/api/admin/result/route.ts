@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminPassword } from "@/lib/config";
 import { GROUP_MATCH_IDS, KNOCKOUT_MATCH_IDS } from "@/lib/matches-data";
-import { resetMatchResult, updateMatchResult } from "@/lib/supabase-matches";
+import {
+  fetchMatchById,
+  resetMatchResult,
+  updateMatchResult,
+} from "@/lib/supabase-matches";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { toEnglishTeam } from "@/lib/team-names";
 
 const validMatchIds = new Set([...GROUP_MATCH_IDS, ...KNOCKOUT_MATCH_IDS]);
+const knockoutIds = new Set(KNOCKOUT_MATCH_IDS);
+
+function norm(name: string): string {
+  return toEnglishTeam(name.trim());
+}
 
 export async function POST(req: NextRequest) {
   const password = req.headers.get("x-admin-password") ?? "";
@@ -24,6 +34,8 @@ export async function POST(req: NextRequest) {
   const homeScore = Number(body.homeScore);
   const awayScore = Number(body.awayScore);
   const finished = body.finished !== false;
+  const winnerRaw =
+    typeof body.winnerTeam === "string" ? body.winnerTeam.trim() : "";
 
   if (
     !validMatchIds.has(matchId) ||
@@ -35,7 +47,53 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid result" }, { status: 400 });
   }
 
-  const res = await updateMatchResult(matchId, homeScore, awayScore, finished);
+  const matchRes = await fetchMatchById(matchId);
+  if (matchRes.error || !matchRes.data) {
+    return NextResponse.json(
+      { error: matchRes.error ?? "Match not found" },
+      { status: 404 },
+    );
+  }
+
+  const match = matchRes.data;
+  let winnerTeam: string | null = null;
+
+  if (knockoutIds.has(matchId)) {
+    if (homeScore === awayScore) {
+      if (!winnerRaw) {
+        return NextResponse.json(
+          {
+            error:
+              "Level after 90 minutes — select which team advanced (ET/penalties).",
+          },
+          { status: 400 },
+        );
+      }
+      const w = norm(winnerRaw);
+      const home = norm(match.homeTeam);
+      const away = norm(match.awayTeam);
+      if (w !== home && w !== away) {
+        return NextResponse.json(
+          { error: "Winner must be the home or away team." },
+          { status: 400 },
+        );
+      }
+      winnerTeam = w === home ? match.homeTeam : match.awayTeam;
+    }
+  } else if (winnerRaw) {
+    return NextResponse.json(
+      { error: "Winner selection is only for knockout matches." },
+      { status: 400 },
+    );
+  }
+
+  const res = await updateMatchResult(
+    matchId,
+    homeScore,
+    awayScore,
+    finished,
+    winnerTeam,
+  );
   if (res.error || !res.data) {
     return NextResponse.json(
       { error: res.error ?? "Update failed" },

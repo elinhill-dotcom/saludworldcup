@@ -22,6 +22,7 @@ export type MatchRow = {
   home_score: number | null;
   away_score: number | null;
   finished: boolean;
+  winner_team?: string | null;
 };
 
 export type PredictionRow = {

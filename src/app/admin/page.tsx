@@ -136,6 +136,7 @@ export default function AdminPage() {
     matchId: number,
     homeScore: number,
     awayScore: number,
+    winnerTeam?: string | null,
   ) {
     showMessage("");
     const res = await fetch("/api/admin/result", {
@@ -144,7 +145,13 @@ export default function AdminPage() {
         "Content-Type": "application/json",
         "x-admin-password": password,
       },
-      body: JSON.stringify({ matchId, homeScore, awayScore, finished: true }),
+      body: JSON.stringify({
+        matchId,
+        homeScore,
+        awayScore,
+        finished: true,
+        ...(winnerTeam ? { winnerTeam } : {}),
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -404,6 +411,7 @@ export default function AdminPage() {
               <AdminMatchRow
                 key={m.id}
                 match={m}
+                knockout
                 onSave={saveResult}
                 onReset={resetResult}
               />
@@ -438,11 +446,13 @@ export default function AdminPage() {
 
 function AdminMatchRow({
   match,
+  knockout = false,
   onSave,
   onReset,
 }: {
   match: MatchView;
-  onSave: (id: number, h: number, a: number) => void;
+  knockout?: boolean;
+  onSave: (id: number, h: number, a: number, winnerTeam?: string | null) => void;
   onReset: (id: number) => void;
 }) {
   const [home, setHome] = useState(
@@ -451,11 +461,24 @@ function AdminMatchRow({
   const [away, setAway] = useState(
     match.awayScore !== null ? String(match.awayScore) : "0",
   );
+  const [winner, setWinner] = useState(match.winnerTeam ?? "");
+
+  useEffect(() => {
+    setHome(match.homeScore !== null ? String(match.homeScore) : "0");
+    setAway(match.awayScore !== null ? String(match.awayScore) : "0");
+    setWinner(match.winnerTeam ?? "");
+  }, [match.homeScore, match.awayScore, match.winnerTeam, match.id]);
+
+  const h = Number(home);
+  const a = Number(away);
+  const isDraw = Number.isInteger(h) && Number.isInteger(a) && h === a;
+  const needsWinner = knockout && isDraw;
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
       <p className="text-xs text-[var(--muted)] mb-2">
         #{match.id}
+        {match.matchNumber ? ` · Match ${match.matchNumber}` : ""}
         {match.groupCode ? ` · Group ${match.groupCode}` : ""} · {match.dayLabel}
       </p>
       <p className="font-semibold mb-3">
@@ -483,16 +506,39 @@ function AdminMatchRow({
           onChange={(e) => setAway(e.target.value)}
           className="w-14 rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-center"
         />
+        {needsWinner && (
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-[var(--muted)]">Advanced:</span>
+            <select
+              value={winner}
+              onChange={(e) => setWinner(e.target.value)}
+              className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-sm max-w-[12rem]"
+              required
+            >
+              <option value="">Select winner…</option>
+              <option value={match.homeTeam}>{match.homeTeam}</option>
+              <option value={match.awayTeam}>{match.awayTeam}</option>
+            </select>
+          </label>
+        )}
         <button
           type="button"
-          onClick={() => onSave(match.id, Number(home), Number(away))}
-          className="rounded-lg bg-[var(--success)] px-4 py-1.5 text-sm font-medium text-[var(--accent-foreground)]"
+          onClick={() =>
+            onSave(match.id, h, a, needsWinner ? winner || null : null)
+          }
+          disabled={needsWinner && !winner}
+          className="rounded-lg bg-[var(--success)] px-4 py-1.5 text-sm font-medium text-[var(--accent-foreground)] disabled:opacity-50"
         >
           {match.finished ? "Update" : "Save result"}
         </button>
         {match.finished && (
           <>
-            <span className="text-xs text-[var(--muted)]">Done</span>
+            <span className="text-xs text-[var(--muted)]">
+              Done
+              {match.winnerTeam &&
+                match.homeScore === match.awayScore &&
+                ` · ${match.winnerTeam} advanced`}
+            </span>
             <button
               type="button"
               onClick={() => onReset(match.id)}
@@ -503,6 +549,12 @@ function AdminMatchRow({
           </>
         )}
       </div>
+      {knockout && (
+        <p className="text-xs text-[var(--muted)] mt-2">
+          Enter the score after 90 minutes. If level, choose who advanced after
+          extra time or penalties.
+        </p>
+      )}
     </div>
   );
 }

@@ -51,6 +51,7 @@ export function mapMatch(row: MatchRow): MatchView {
     homeScore: row.home_score,
     awayScore: row.away_score,
     finished: row.finished,
+    winnerTeam: row.winner_team ? toEnglishTeam(row.winner_team) : null,
   };
 }
 

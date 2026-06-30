@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getLeaderboardPayload } from "@/lib/leaderboard";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   if (!isSupabaseConfigured()) {
     return NextResponse.json(

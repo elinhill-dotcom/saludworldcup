@@ -244,6 +244,15 @@ export function resolveKnockoutBracket(
         } else if (m.awayScore > m.homeScore) {
           winner = awayTeam;
           loser = homeTeam;
+        } else if (raw.winnerTeam) {
+          const w = norm(raw.winnerTeam);
+          if (w === norm(homeTeam)) {
+            winner = homeTeam;
+            loser = awayTeam;
+          } else if (w === norm(awayTeam)) {
+            winner = awayTeam;
+            loser = homeTeam;
+          }
         }
       }
 
